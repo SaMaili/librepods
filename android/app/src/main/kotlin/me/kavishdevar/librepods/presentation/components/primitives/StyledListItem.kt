@@ -932,7 +932,8 @@ private fun StyledListItemContent(
                                         imageVector = LocalIcons.current.Check,
                                         contentDescription = null,
                                         modifier = Modifier
-                                            .size(24.dp)
+                                            .size(24.dp),
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer
                                     )
                                 } else if (selected == null) {
                                     Icon(
