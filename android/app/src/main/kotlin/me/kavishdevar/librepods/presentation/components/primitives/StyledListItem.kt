@@ -92,7 +92,12 @@ fun StyledListItem(
                 disabledTrailingContentColor = trailingContentColor
             )
         }
-    } else ListItemDefaults.segmentedColors()
+    } else ListItemDefaults.segmentedColors().run {
+        copy(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            disabledContainerColor = disabledContainerColor // because having just containerColor uses a deprecated overload
+        )
+    }
 ) {
     val m3eEnabled = LocalDesignSystem.current == DesignSystem.Material
     Column {
@@ -160,7 +165,12 @@ fun StyledListItem(
                 disabledTrailingContentColor = trailingContentColor
             )
         }
-    } else ListItemDefaults.segmentedColors()
+    } else ListItemDefaults.segmentedColors().run {
+        copy(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            disabledContainerColor = disabledContainerColor
+        )
+    }
 ) {
     val m3eEnabled = LocalDesignSystem.current == DesignSystem.Material
     Column {
@@ -246,7 +256,12 @@ fun StyledListItem(
                 disabledTrailingContentColor = trailingContentColor
             )
         }
-    } else ListItemDefaults.segmentedColors()
+    } else ListItemDefaults.segmentedColors().run {
+        copy(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            disabledContainerColor = disabledContainerColor
+        )
+    }
 ) {
     val m3eEnabled = LocalDesignSystem.current == DesignSystem.Material
     Column {
@@ -332,7 +347,12 @@ fun StyledListItem(
                 disabledTrailingContentColor = trailingContentColor
             )
         }
-    } else ListItemDefaults.segmentedColors()
+    } else ListItemDefaults.segmentedColors().run {
+        copy(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            disabledContainerColor = disabledContainerColor
+        )
+    }
 ) {
     val m3eEnabled = LocalDesignSystem.current == DesignSystem.Material
     Column {
@@ -436,7 +456,12 @@ fun StyledListScope.StyledListItem(
                 disabledTrailingContentColor = trailingContentColor
             )
         }
-    } else ListItemDefaults.segmentedColors()
+    } else ListItemDefaults.segmentedColors().run {
+        copy(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            disabledContainerColor = disabledContainerColor
+        )
+    }
 ) {
     item { index, count ->
         StyledListItemContent(
@@ -493,7 +518,12 @@ fun StyledListScope.StyledListItem(
                 disabledTrailingContentColor = trailingContentColor
             )
         }
-    } else ListItemDefaults.segmentedColors()
+    } else ListItemDefaults.segmentedColors().run {
+        copy(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            disabledContainerColor = disabledContainerColor
+        )
+    }
 ) {
     item { index, count ->
         StyledListItemContent(
@@ -534,7 +564,12 @@ fun StyledListScope.StyledListItem(
                 disabledTrailingContentColor = trailingContentColor
             )
         }
-    } else ListItemDefaults.segmentedColors()
+    } else ListItemDefaults.segmentedColors().run {
+        copy(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            disabledContainerColor = disabledContainerColor
+        )
+    }
 ) {
     item { index, count ->
         StyledListItemContent(
@@ -592,7 +627,12 @@ fun StyledListScope.StyledListItem(
                 disabledTrailingContentColor = trailingContentColor
             )
         }
-    } else ListItemDefaults.segmentedColors()
+    } else ListItemDefaults.segmentedColors().run {
+        copy(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            disabledContainerColor = disabledContainerColor
+        )
+    }
 ) {
     item { index, count ->
         StyledListItemContent(
@@ -666,7 +706,12 @@ private fun StyledListItemContent(
                 disabledTrailingContentColor = trailingContentColor
             )
         }
-    } else ListItemDefaults.segmentedColors()
+    } else ListItemDefaults.segmentedColors().run {
+        copy(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            disabledContainerColor = disabledContainerColor
+        )
+    }
 ) {
     val haptics = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
