@@ -16,8 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-@file:OptIn(ExperimentalEncodingApi::class)
-
 package me.kavishdevar.librepods.presentation.components.primitives
 
 import androidx.compose.foundation.background
@@ -31,9 +29,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemColors
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -57,14 +56,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
-import me.kavishdevar.librepods.presentation.theme.DesignSystem
-import me.kavishdevar.librepods.presentation.theme.LibrePodsTheme
-import me.kavishdevar.librepods.presentation.theme.LocalDesignSystem
-import me.kavishdevar.librepods.presentation.theme.sectionHeader
-import kotlin.io.encoding.ExperimentalEncodingApi
+import me.kavishdevar.librepods.presentation.design.DesignSystem
+import me.kavishdevar.librepods.presentation.design.LibrePodsTheme
+import me.kavishdevar.librepods.presentation.design.LocalAccessibilitySettings
+import me.kavishdevar.librepods.presentation.design.LocalDesignSystem
+import me.kavishdevar.librepods.presentation.design.sectionHeader
+import me.kavishdevar.librepods.presentation.icons.LocalIcons
 
 @Composable
 fun StyledToggle(
+    modifier: Modifier = Modifier,
     title: String? = null,
     label: String,
     description: String? = null,
@@ -82,19 +83,20 @@ fun StyledToggle(
     )
 ) {
     val m3eEnabled = LocalDesignSystem.current == DesignSystem.Material
+
     Column(modifier = Modifier.padding(vertical = 12.dp)) {
         title?.let {
             Text(
                 text = it,
                 color = if (m3eEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.sectionHeader,
-                style = MaterialTheme.typography.labelSmallEmphasized,
+                style = MaterialTheme.typography.bodyMediumEmphasized,
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
                     .padding(top = 4.dp, bottom = if (m3eEnabled) 12.dp else 4.dp)
             )
         }
         Column(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxWidth()
                 .background(
                     if (m3eEnabled) if (header) MaterialTheme.colorScheme.primaryContainer else Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -104,6 +106,7 @@ fun StyledToggle(
         ) {
             if (m3eEnabled) {
                 StyledToggleContent(
+                    modifier = Modifier,
                     label = label,
                     description = description,
                     checked = checked,
@@ -116,6 +119,7 @@ fun StyledToggle(
                 )
             } else {
                 StyledToggleContent(
+                    modifier = Modifier,
                     label = label,
                     checked = checked,
                     enabled = enabled,
@@ -139,7 +143,8 @@ fun StyledToggle(
 }
 
 @Composable
-fun StyledListScope.StyledToggle(
+fun StyledListScope.styledToggle(
+    modifier: Modifier = Modifier,
     label: String,
     description: String? = null,
     checked: Boolean = false,
@@ -153,6 +158,7 @@ fun StyledListScope.StyledToggle(
 ) {
     item { index, count ->
         StyledToggleContent(
+            modifier = modifier,
             label = label,
             description = description,
             checked = checked,
@@ -165,9 +171,9 @@ fun StyledListScope.StyledToggle(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun StyledToggleContent(
+    modifier: Modifier,
     label: String,
     description: String? = null,
     checked: Boolean = false,
@@ -212,7 +218,7 @@ private fun StyledToggleContent(
 
             else -> RoundedCornerShape(8.dp)
         }
-        Column {
+        Column (modifier = modifier) {
             SegmentedListItem(
                 shapes = ListItemDefaults.shapes().copy(
                     shape = defaultShape,
@@ -226,7 +232,17 @@ private fun StyledToggleContent(
                         checked = currentChecked,
                         onCheckedChange = onCheckedChange,
                         modifier = Modifier.padding(end = if (header) 8.dp else 0.dp),
-                        enabled = enabled
+                        enabled = enabled,
+                        thumbContent = if (LocalAccessibilitySettings.current.differentiateWithoutColor) {
+                            {
+                                Icon(
+                                    imageVector = if (currentChecked) LocalIcons.current.Check else LocalIcons.current.Close,
+                                    contentDescription = null,
+                                    tint = if (currentChecked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        } else null
                     )
                 },
                 supportingContent = description?.let {
@@ -235,7 +251,10 @@ private fun StyledToggleContent(
                             text = it,
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier
-                                .padding(top = if (header) 2.dp else 4.dp, bottom = if (header) 8.dp else 4.dp)
+                                .padding(
+                                    top = if (header) 2.dp else 4.dp,
+                                    bottom = if (header) 8.dp else 4.dp
+                                )
                                 .padding(horizontal = if (header) 8.dp else 0.dp),
                             color = if (header && enabled) MaterialTheme.colorScheme.onPrimaryContainer else Color.Unspecified
                         )
@@ -244,7 +263,7 @@ private fun StyledToggleContent(
                 content = {
                     Text(
                         text = label,
-                        style = MaterialTheme.typography.labelMediumEmphasized,
+                        style = MaterialTheme.typography.bodyMediumEmphasized,
                         modifier = Modifier
                             .padding(
                                 top = if (header) 8.dp else 4.dp,
@@ -265,7 +284,7 @@ private fun StyledToggleContent(
         }
     } else {
         val isPressed = remember { mutableStateOf(false) }
-        Column {
+        Column (modifier = modifier) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -301,7 +320,7 @@ private fun StyledToggleContent(
                 ) {
                     Text(
                         text = label,
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
 
@@ -344,7 +363,7 @@ fun StyledToggleAppleListPreview() {
     val checked = remember { mutableStateOf(false) }
     LibrePodsTheme(designSystem = DesignSystem.Apple) {
         StyledList {
-            StyledToggle(
+            styledToggle(
                 label = "Apple Styled List",
                 description = "This is an example description for the styled toggle.",
                 checked = checked.value,
@@ -374,7 +393,7 @@ fun StyledToggleM3EListPreview() {
     val checked = remember { mutableStateOf(false) }
     LibrePodsTheme(designSystem = DesignSystem.Material) {
         StyledList {
-            StyledToggle(
+            styledToggle(
                 label = "Apple Styled List",
 //                description = "This is an example description for the styled toggle.",
                 checked = checked.value,

@@ -24,8 +24,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.presentation.components.primitives.StyledList
-import me.kavishdevar.librepods.presentation.components.primitives.StyledListItem
-import me.kavishdevar.librepods.presentation.components.primitives.StyledToggle
+import me.kavishdevar.librepods.presentation.components.primitives.styledListItem
+import me.kavishdevar.librepods.presentation.components.primitives.styledToggle
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 @Composable
@@ -52,7 +52,7 @@ fun AudioSettings(
     if (adaptiveVolumeCapability || conversationalAwarenessCapability || loudSoundReductionCapability) {
         StyledList(title = stringResource(R.string.audio)) {
             if (adaptiveVolumeCapability) {
-                StyledToggle(
+                styledToggle(
                     label = stringResource(R.string.personalized_volume),
                     description = stringResource(R.string.personalized_volume_description),
                     checked = adaptiveVolumeChecked,
@@ -62,7 +62,7 @@ fun AudioSettings(
             }
 
             if (conversationalAwarenessCapability) {
-                StyledToggle(
+                styledToggle(
                     label = stringResource(R.string.conversational_awareness),
                     description = stringResource(R.string.conversational_awareness_description),
                     checked = conversationalAwarenessChecked,
@@ -72,7 +72,7 @@ fun AudioSettings(
             }
 
             if (loudSoundReductionCapability && vendorIdHook) {
-                StyledToggle(
+                styledToggle(
                     label = stringResource(R.string.loud_sound_reduction),
                     description = stringResource(R.string.loud_sound_reduction_description),
                     checked = loudSoundReductionChecked,
@@ -82,7 +82,7 @@ fun AudioSettings(
             }
 
             if (customEqCapability) {
-                StyledListItem(
+                styledListItem(
                     contentText = stringResource(R.string.equalizer),
                     onClick = navigateToEqualizer,
                 )

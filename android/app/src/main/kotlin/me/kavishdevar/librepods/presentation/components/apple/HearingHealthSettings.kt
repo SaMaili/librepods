@@ -25,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.presentation.components.primitives.StyledList
 import me.kavishdevar.librepods.presentation.components.primitives.StyledListItem
+import me.kavishdevar.librepods.presentation.components.primitives.styledListItem
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 @Composable
@@ -39,12 +40,12 @@ fun HearingHealthSettings(
 
     if (hasPPECapability && shouldShowHearingAid) {
         StyledList(title = stringResource(R.string.hearing_health)) {
-            StyledListItem(
+            styledListItem(
                 contentText = stringResource(R.string.hearing_protection),
                 onClick = navigateToHearingProtection
             )
 
-            StyledListItem(
+            styledListItem(
                 contentText = stringResource(R.string.hearing_aid),
                 onClick = navigateToHearingAid
             )

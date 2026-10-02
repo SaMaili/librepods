@@ -178,7 +178,7 @@ class LibrePodsService: Service() {
                         device is AppleDevice &&
                         device.connectionState.value == ConnectionState.CONNECTED &&
                         device.state.value.componentState.any { it.status == ComponentStatus.IN_EAR }
-                    }.let { device ->
+                    }?.let { device ->
                         (device as AppleDevice).stopHeadGestureDetection()
                     }
                 }

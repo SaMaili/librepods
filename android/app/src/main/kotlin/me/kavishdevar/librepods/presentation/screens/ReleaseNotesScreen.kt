@@ -79,9 +79,9 @@ import me.kavishdevar.librepods.BuildConfig
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.data.updates.UpdateItem
 import me.kavishdevar.librepods.data.updates.updates
-import me.kavishdevar.librepods.presentation.theme.DesignSystem
-import me.kavishdevar.librepods.presentation.theme.LibrePodsTheme
-import me.kavishdevar.librepods.presentation.theme.LocalDesignSystem
+import me.kavishdevar.librepods.presentation.design.DesignSystem
+import me.kavishdevar.librepods.presentation.design.LibrePodsTheme
+import me.kavishdevar.librepods.presentation.design.LocalDesignSystem
 import kotlin.math.min
 
 @OptIn(ExperimentalMaterial3Api::class)

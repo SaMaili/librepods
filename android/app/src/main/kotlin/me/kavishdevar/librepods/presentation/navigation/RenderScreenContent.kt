@@ -15,6 +15,8 @@ import me.kavishdevar.librepods.bluetooth.aacp.types.ControlCommandIdentifier
 import me.kavishdevar.librepods.data.updates.updates
 import me.kavishdevar.librepods.devices.AppleDevice
 import me.kavishdevar.librepods.devices.Device
+import me.kavishdevar.librepods.presentation.screens.AppAccessibilitySettingsRoute
+import me.kavishdevar.librepods.presentation.screens.AppAppearanceSettingsRoute
 import me.kavishdevar.librepods.presentation.screens.AppSettingsScreen
 import me.kavishdevar.librepods.presentation.screens.BLESettingsScreenRoute
 import me.kavishdevar.librepods.presentation.screens.DeviceListScreen
@@ -104,6 +106,12 @@ fun RenderScreenContent(
                         is AppleDevice -> navigate(Screen.AppleScreen(macAddress))
                         else -> {}
                     }
+                },
+                navigateToHeartRateScreen = { macAddress ->
+                    when (devices[macAddress]) {
+                        is AppleDevice -> navigate(Screen.HeartRate(macAddress))
+                        else -> {}
+                    }
                 }
             )
         }
@@ -165,7 +173,9 @@ fun RenderScreenContent(
                 navigateToPurchase = ::navigateToPurchase,
                 navigateToOpenSourceLicenses = { navigate(Screen.OpenSourceLicenses) },
                 navigateToReleaseNotesScreen = { navigate(Screen.ReleaseNotes) },
-                navigateToBleSettingsScreen = { navigate(Screen.BLESettings) }
+                navigateToBleSettingsScreen = { navigate(Screen.BLESettings) },
+                navigateToAppAppearanceScreen = { navigate(Screen.AppAppearance) },
+                navigateToAppAccessibilityScreen = { navigate(Screen.AppAccessibilitySettings) }
             )
         }
 
@@ -415,6 +425,28 @@ fun RenderScreenContent(
             )
             HeartRateRoute(
                 viewModel = appleViewModel,
+                navigateBack = navigateBack
+            )
+        }
+
+        is Screen.AppAccessibilitySettings -> {
+            val factory = viewModelFactory {
+                initializer { AppSettingsViewModel(appDataRepository = appDataRepository) }
+            }
+            val appSettingsViewModel: AppSettingsViewModel = viewModel(factory = factory)
+            AppAccessibilitySettingsRoute(
+                viewModel = appSettingsViewModel,
+                navigateBack = navigateBack
+            )
+        }
+
+        is Screen.AppAppearance -> {
+            val factory = viewModelFactory {
+                initializer { AppSettingsViewModel(appDataRepository = appDataRepository) }
+            }
+            val appSettingsViewModel: AppSettingsViewModel = viewModel(factory = factory)
+            AppAppearanceSettingsRoute(
+                viewModel = appSettingsViewModel,
                 navigateBack = navigateBack
             )
         }

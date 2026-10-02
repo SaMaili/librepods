@@ -23,7 +23,7 @@ import androidx.compose.ui.res.stringResource
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.data.StemAction
 import me.kavishdevar.librepods.presentation.components.primitives.StyledList
-import me.kavishdevar.librepods.presentation.components.primitives.StyledListItem
+import me.kavishdevar.librepods.presentation.components.primitives.styledListItem
 
 @Composable
 fun PressAndHoldSettings(
@@ -47,12 +47,12 @@ fun PressAndHoldSettings(
     StyledList(
         title = stringResource(R.string.press_and_hold_airpods)
     ) {
-        StyledListItem(
+        styledListItem(
             contentText = stringResource(R.string.left),
             supportingText = leftActionText,
             onClick = navigateToLeftLongPress
         )
-        StyledListItem(
+        styledListItem(
             contentText = stringResource(R.string.right),
             supportingText = rightActionText,
             onClick = navigateToRightLongPress,

@@ -25,13 +25,16 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -76,6 +79,7 @@ import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.shadow.Shadow
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import me.kavishdevar.librepods.presentation.design.LocalAccessibilitySettings
 import kotlin.math.abs
 
 @Composable
@@ -87,6 +91,8 @@ fun StyledSwitch(
 ) {
     val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val haptics = LocalHapticFeedback.current
+
+    val differentiateWithoutColor = LocalAccessibilitySettings.current.differentiateWithoutColor
 
     val onColor = if (enabled) Color(0xFF34C759) else if (isDarkTheme) Color(0xFF5B5B5E) else Color(0xFFD1D1D6)
     val offColor = if (enabled) if (isDarkTheme) Color(0xFF5B5B5E) else Color(0xFFD1D1D6) else if (isDarkTheme) Color(
@@ -154,6 +160,40 @@ fun StyledSwitch(
                 .height(trackHeight)
                 .onSizeChanged { trackWidthPx.floatValue = it.width.toFloat() }
         )
+        if (differentiateWithoutColor) {
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 2.dp)
+                    .graphicsLayer {
+                        translationX = if (checked) 0f else (trackWidthPx.floatValue - with(density) { (trackWidth - thumbWidth).toPx() + 4.dp.toPx()} )
+                    }
+                    .width(trackWidth - thumbWidth)
+                    .height(trackWidth)
+            ) {
+                // no matching symbols to use as icon
+                if (checked) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .width(2.dp)
+                            .height(trackHeight / 3)
+                            .clip(RoundedCornerShape(50))
+                            .background(Color.White)
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .size(trackHeight / 3)
+                            .border(
+                                width = 1.5.dp,
+                                color = Color.Gray,
+                                shape = CircleShape
+                            )
+                    )
+                }
+            }
+        }
         Box(
             modifier = Modifier
                 .padding(horizontal = 2.dp)

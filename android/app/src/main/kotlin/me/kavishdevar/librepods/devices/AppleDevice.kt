@@ -204,7 +204,6 @@ class AppleDevice(
         }
     }
 
-
     suspend fun readATTCharacteristic(handle: ATTHandle): ByteArray? = att.readCharacteristic(handle)
 
     fun requestMicrophoneStream() = aacp.requestMicrophoneStream()

@@ -57,6 +57,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import me.kavishdevar.librepods.R
+import me.kavishdevar.librepods.billing.BillingManager
 import me.kavishdevar.librepods.bluetooth.MacAddress
 import me.kavishdevar.librepods.bluetooth.aacp.types.ControlCommandIdentifier
 import me.kavishdevar.librepods.devices.AirPodsSpecs
@@ -72,9 +73,11 @@ import me.kavishdevar.librepods.presentation.components.primitives.StyledList
 import me.kavishdevar.librepods.presentation.components.primitives.StyledListItem
 import me.kavishdevar.librepods.presentation.components.primitives.StyledListItemOrientation
 import me.kavishdevar.librepods.presentation.components.primitives.StyledScaffold
+import me.kavishdevar.librepods.presentation.components.primitives.styledListItem
+import me.kavishdevar.librepods.presentation.components.primitives.styledToggle
+import me.kavishdevar.librepods.presentation.design.DesignSystem
+import me.kavishdevar.librepods.presentation.design.LocalDesignSystem
 import me.kavishdevar.librepods.presentation.icons.LocalIcons
-import me.kavishdevar.librepods.presentation.theme.DesignSystem
-import me.kavishdevar.librepods.presentation.theme.LocalDesignSystem
 import me.kavishdevar.librepods.presentation.utils.createAirPodsBatteryRichText
 import kotlin.math.min
 import kotlin.time.Duration.Companion.milliseconds
@@ -84,8 +87,11 @@ fun DeviceListScreen(
     devices: Map<MacAddress, Device<*, *, *>>,
     navigateToAppSettings: () -> Unit,
     navigateToDevice: (MacAddress) -> Unit,
+    navigateToHeartRateScreen: (MacAddress) -> Unit
 ) {
     val scrollState = rememberScrollState()
+
+    val isPremium by BillingManager.provider.isPremium.collectAsState()
 
     StyledScaffold(
         title = stringResource(R.string.app_name),
@@ -125,192 +131,201 @@ fun DeviceListScreen(
             modifier = Modifier
                 .padding(horizontal = 16.dp)
                 .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(32.dp)
         ) {
             Spacer(modifier = Modifier.padding(top = topPadding))
 
             Log.d("DeviceListScreen", "Rendering device list with ${devices.size} devices")
 
-            StyledList(title = stringResource(R.string.devices), key = devices) {
-                devices.forEach { (macAddress, device) ->
-                    val connectionState by device.connectionState.collectAsState()
-                    val deviceState by device.state.collectAsState()
-                    val deviceMetadata by device.metadata.collectAsState()
+            devices.forEach { (macAddress, device) ->
+                val connectionState by device.connectionState.collectAsState()
+                val deviceState by device.state.collectAsState()
+                val deviceMetadata by device.metadata.collectAsState()
 
-                    fun ConnectionState.shape() = when (this) {
-                        ConnectionState.DISCONNECTED -> MaterialShapes.Circle.normalized()
-                        ConnectionState.CONNECTING -> MaterialShapes.SoftBurst.normalized()
-                        ConnectionState.CONNECTED -> MaterialShapes.SoftBurst.normalized()
-                        ConnectionState.DISCONNECTING -> MaterialShapes.Cookie4Sided.normalized()
-                        ConnectionState.AVAILABLE -> MaterialShapes.Circle.normalized()
-                    }
+                fun ConnectionState.shape() = when (this) {
+                    ConnectionState.DISCONNECTED -> MaterialShapes.Circle.normalized()
+                    ConnectionState.CONNECTING -> MaterialShapes.SoftBurst.normalized()
+                    ConnectionState.CONNECTED -> MaterialShapes.SoftBurst.normalized()
+                    ConnectionState.DISCONNECTING -> MaterialShapes.Cookie4Sided.normalized()
+                    ConnectionState.AVAILABLE -> MaterialShapes.Circle.normalized()
+                }
 
-                    val connectingShapes = remember {
-                        listOf(
-                            MaterialShapes.Cookie4Sided.normalized(),
-                            MaterialShapes.SoftBurst.normalized(),
-                            MaterialShapes.Cookie9Sided.normalized(),
-                            MaterialShapes.Pentagon.normalized(),
-                            MaterialShapes.Pill.normalized(),
-                            MaterialShapes.Sunny.normalized(),
-                            MaterialShapes.Cookie4Sided.normalized(),
-                            MaterialShapes.Oval.normalized(),
-                        )
-                    }
+                val connectingShapes = remember {
+                    listOf(
+                        MaterialShapes.Cookie4Sided.normalized(),
+                        MaterialShapes.SoftBurst.normalized(),
+                        MaterialShapes.Cookie9Sided.normalized(),
+                        MaterialShapes.Pentagon.normalized(),
+                        MaterialShapes.Pill.normalized(),
+                        MaterialShapes.Sunny.normalized(),
+                        MaterialShapes.Cookie4Sided.normalized(),
+                        MaterialShapes.Oval.normalized(),
+                    )
+                }
 
-                    val connectingMorphs = remember {
-                        buildList {
-                            connectingShapes.zipWithNext { a, b ->
-                                add(Morph(a, b))
-                            }
-                            add(Morph(connectingShapes.last(), connectingShapes.first()))
+                val connectingMorphs = remember {
+                    buildList {
+                        connectingShapes.zipWithNext { a, b ->
+                            add(Morph(a, b))
                         }
+                        add(Morph(connectingShapes.last(), connectingShapes.first()))
                     }
+                }
 
-                    var previousState by remember { mutableStateOf(connectionState) }
+                var previousState by remember { mutableStateOf(connectionState) }
 
-                    var pressed by remember { mutableStateOf(false) }
+                var pressed by remember { mutableStateOf(false) }
 
-                    val touchMorph = remember {
-                        Morph(
-                            if (connectionState == ConnectionState.CONNECTED) MaterialShapes.SoftBurst.normalized() else MaterialShapes.Circle.normalized(),
-                            MaterialShapes.Cookie4Sided.normalized()
+                val touchMorph = remember {
+                    Morph(
+                        if (connectionState == ConnectionState.CONNECTED) MaterialShapes.SoftBurst.normalized() else MaterialShapes.Circle.normalized(),
+                        MaterialShapes.Cookie4Sided.normalized()
+                    )
+                }
+
+                val touchProgress = remember { Animatable(0f) }
+
+                LaunchedEffect(pressed) {
+                    touchProgress.animateTo(
+                        targetValue = if (pressed) 1f else 0f,
+                        animationSpec = spring(
+                            dampingRatio = 0.6f,
+                            stiffness = 200f,
+                            visibilityThreshold = 0.1f
                         )
-                    }
+                    )
+                }
 
-                    val touchProgress = remember { Animatable(0f) }
+                var currentMorphIndex by remember { mutableIntStateOf(0) }
+                var morphRotationTarget by remember { mutableFloatStateOf(90f) }
 
-                    LaunchedEffect(pressed) {
-                        touchProgress.animateTo(
-                            targetValue = if (pressed) 1f else 0f,
-                            animationSpec = spring(
-                                dampingRatio = 0.6f,
-                                stiffness = 200f,
-                                visibilityThreshold = 0.1f
-                            )
-                        )
-                    }
+                val morphProgress = remember { Animatable(0f) }
+                val globalRotation = remember { Animatable(0f) }
 
-                    var currentMorphIndex by remember { mutableIntStateOf(0) }
-                    var morphRotationTarget by remember { mutableFloatStateOf(90f) }
+                LaunchedEffect(connectionState) {
+                    if (connectionState == ConnectionState.CONNECTING) {
+                        pressed = false
+                        currentMorphIndex = 0
+                        morphRotationTarget = 90f
 
-                    val morphProgress = remember { Animatable(0f) }
-                    val globalRotation = remember { Animatable(0f) }
+                        morphProgress.stop()
+                        morphProgress.snapTo(0f)
 
-                    LaunchedEffect(connectionState) {
-                        if (connectionState == ConnectionState.CONNECTING) {
-                            pressed = false
-                            currentMorphIndex = 0
-                            morphRotationTarget = 90f
+                        globalRotation.stop()
+                        globalRotation.snapTo(0f)
 
-                            morphProgress.stop()
-                            morphProgress.snapTo(0f)
-
-                            globalRotation.stop()
-                            globalRotation.snapTo(0f)
-
-                            coroutineScope {
-                                launch {
-                                    while (isActive) {
-                                        val deferred = async {
-                                            morphProgress.animateTo(
-                                                1f,
-                                                spring(
-                                                    dampingRatio = 0.6f,
-                                                    stiffness = 200f,
-                                                    visibilityThreshold = 0.1f
-                                                )
+                        coroutineScope {
+                            launch {
+                                while (isActive) {
+                                    val deferred = async {
+                                        morphProgress.animateTo(
+                                            1f,
+                                            spring(
+                                                dampingRatio = 0.6f,
+                                                stiffness = 200f,
+                                                visibilityThreshold = 0.1f
                                             )
-
-                                            currentMorphIndex =
-                                                (currentMorphIndex + 1) % connectingMorphs.size
-
-                                            morphProgress.snapTo(0f)
-
-                                            morphRotationTarget =
-                                                (morphRotationTarget + 90f) % 360f
-                                        }
-
-                                        delay(650.milliseconds)
-                                        deferred.await()
-                                    }
-                                }
-
-                                launch {
-                                    globalRotation.animateTo(
-                                        targetValue = 360f,
-                                        animationSpec = infiniteRepeatable(
-                                            tween(4666, easing = LinearEasing),
-                                            repeatMode = RepeatMode.Restart
                                         )
-                                    )
+
+                                        currentMorphIndex =
+                                            (currentMorphIndex + 1) % connectingMorphs.size
+
+                                        morphProgress.snapTo(0f)
+
+                                        morphRotationTarget =
+                                            (morphRotationTarget + 90f) % 360f
+                                    }
+
+                                    delay(650.milliseconds)
+                                    deferred.await()
                                 }
                             }
-                        } else {
-                            globalRotation.stop()
-                            morphProgress.stop()
 
-                            morphProgress.snapTo(0f)
-
-                            morphProgress.animateTo(
-                                1f,
-                                spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessMedium
+                            launch {
+                                globalRotation.animateTo(
+                                    targetValue = 360f,
+                                    animationSpec = infiniteRepeatable(
+                                        tween(4666, easing = LinearEasing),
+                                        repeatMode = RepeatMode.Restart
+                                    )
                                 )
+                            }
+                        }
+                    } else {
+                        globalRotation.stop()
+                        morphProgress.stop()
+
+                        morphProgress.snapTo(0f)
+
+                        morphProgress.animateTo(
+                            1f,
+                            spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMedium
                             )
+                        )
 
-                            previousState = connectionState
-                        }
+                        previousState = connectionState
                     }
+                }
 
-                    val morph = remember(
-                        connectionState,
-                        previousState,
-                        currentMorphIndex
-                    ) {
-                        if (connectionState == ConnectionState.CONNECTING) {
-                            connectingMorphs[currentMorphIndex]
-                        } else {
-                            Morph(previousState.shape(), connectionState.shape())
-                        }
+                val morph = remember(
+                    connectionState,
+                    previousState,
+                    currentMorphIndex
+                ) {
+                    if (connectionState == ConnectionState.CONNECTING) {
+                        connectingMorphs[currentMorphIndex]
+                    } else {
+                        Morph(previousState.shape(), connectionState.shape())
                     }
+                }
 
-                    val iconBackgroundColor by animateColorAsState(
-                        targetValue = when (connectionState) {
-                            ConnectionState.CONNECTING -> MaterialTheme.colorScheme.secondaryContainer
-                            ConnectionState.CONNECTED -> MaterialTheme.colorScheme.primaryContainer
-                            ConnectionState.DISCONNECTING -> MaterialTheme.colorScheme.surfaceContainer
-                            ConnectionState.DISCONNECTED -> MaterialTheme.colorScheme.surfaceDim
-                            ConnectionState.AVAILABLE -> MaterialTheme.colorScheme.surfaceBright
-                        },
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium
-                        ),
-                        label = "iconBackgroundColor"
-                    )
+                val iconBackgroundColor by animateColorAsState(
+                    targetValue = when (connectionState) {
+                        ConnectionState.CONNECTING -> MaterialTheme.colorScheme.secondaryContainer
+                        ConnectionState.CONNECTED -> MaterialTheme.colorScheme.primaryContainer
+                        ConnectionState.DISCONNECTING -> MaterialTheme.colorScheme.surfaceContainer
+                        ConnectionState.DISCONNECTED -> MaterialTheme.colorScheme.surfaceDim
+                        ConnectionState.AVAILABLE -> MaterialTheme.colorScheme.surfaceBright
+                    },
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    ),
+                    label = "iconBackgroundColor"
+                )
 
-                    val iconColor by animateColorAsState(
-                        targetValue = when (connectionState) {
-                            ConnectionState.CONNECTING -> MaterialTheme.colorScheme.onSecondaryContainer
-                            ConnectionState.CONNECTED -> MaterialTheme.colorScheme.onPrimaryContainer
-                            ConnectionState.DISCONNECTING -> MaterialTheme.colorScheme.onSurface
-                            ConnectionState.DISCONNECTED -> MaterialTheme.colorScheme.contentColorFor(MaterialTheme.colorScheme.surfaceDim)
-                            ConnectionState.AVAILABLE -> MaterialTheme.colorScheme.contentColorFor(MaterialTheme.colorScheme.surfaceBright)
-                        },
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium
-                        ),
-                        label = "iconColor"
-                    )
+                val iconColor by animateColorAsState(
+                    targetValue = when (connectionState) {
+                        ConnectionState.CONNECTING -> MaterialTheme.colorScheme.onSecondaryContainer
+                        ConnectionState.CONNECTED -> MaterialTheme.colorScheme.onPrimaryContainer
+                        ConnectionState.DISCONNECTING -> MaterialTheme.colorScheme.onSurface
+                        ConnectionState.DISCONNECTED -> MaterialTheme.colorScheme.contentColorFor(
+                            MaterialTheme.colorScheme.surfaceDim
+                        )
 
-                    val path = remember { Path() }
-                    val matrix = remember { Matrix() }
+                        ConnectionState.AVAILABLE -> MaterialTheme.colorScheme.contentColorFor(
+                            MaterialTheme.colorScheme.surfaceBright
+                        )
+                    },
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    ),
+                    label = "iconColor"
+                )
 
+                val path = remember { Path() }
+                val matrix = remember { Matrix() }
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     StyledListItem(
-                        onClick = if (device.connectionState.collectAsState().value == ConnectionState.CONNECTED) { { navigateToDevice(macAddress) } } else null,
+                        onClick = if (connectionState == ConnectionState.CONNECTED) {
+                            { navigateToDevice(macAddress) }
+                        } else null,
                         contentText = deviceMetadata.name,
                         leadingContent = {
                             Box(
@@ -386,7 +401,8 @@ fun DeviceListScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = LocalIcons.current.fromName(deviceMetadata.iconName)?: LocalIcons.current.Headphones,
+                                    imageVector = LocalIcons.current.fromName(deviceMetadata.iconName)
+                                        ?: LocalIcons.current.Headphones,
                                     contentDescription = null,
                                     modifier = Modifier.size(32.dp),
                                     tint = iconColor
@@ -400,6 +416,7 @@ fun DeviceListScreen(
                                         is AppleState -> {
 //                                        battery from BLE
                                         }
+
                                         else -> Text(
                                             text = "????",
                                             style = MaterialTheme.typography.bodySmall,
@@ -427,25 +444,50 @@ fun DeviceListScreen(
                                 ConnectionState.CONNECTED -> {
                                     when (deviceState) {
                                         is AppleState -> {
-                                            Column (
-                                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                            Column(
+                                                verticalArrangement = Arrangement.spacedBy(8.dp),
                                             ) {
                                                 val deviceState = deviceState as AppleState
                                                 val deviceMetadata = deviceMetadata as AppleMetadata
 
-                                                val batteryRichText = createAirPodsBatteryRichText(
-                                                    battery = deviceState.battery,
-                                                    airPodsSpec = AirPodsSpecs.getSpec(deviceMetadata.model)
-                                                )
+                                                val batteryRichText =
+                                                    createAirPodsBatteryRichText(
+                                                        battery = deviceState.battery,
+                                                        airPodsSpec = AirPodsSpecs.getSpec(
+                                                            deviceMetadata.model
+                                                        )
+                                                    )
 
                                                 Text(
                                                     text = batteryRichText.text,
                                                     inlineContent = batteryRichText.inlineContent,
-                                                    style = MaterialTheme.typography.bodySmall,
+                                                    style = MaterialTheme.typography.bodyMedium,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        orientation = StyledListItemOrientation.Vertical
+                    )
 
-                                                if (AirPodsSpecs.getSpec(deviceMetadata.model).baseCapabilities.contains(BaseCapability.LISTENING_MODE)) {
+                    if (connectionState == ConnectionState.CONNECTED) {
+                        when (deviceState) {
+                            is AppleState -> {
+                                val deviceState = deviceState as AppleState
+                                val deviceMetadata = deviceMetadata as AppleMetadata
+
+                                val listeningModeCapability = AirPodsSpecs.getSpec(deviceMetadata.model).baseCapabilities.contains(BaseCapability.LISTENING_MODE)
+                                val conversationalAwarenessCapability = AirPodsSpecs.getSpec(deviceMetadata.model).baseCapabilities.contains(BaseCapability.CONVERSATION_AWARENESS)
+                                val hrmCapability = AirPodsSpecs.getSpec(deviceMetadata.model).baseCapabilities.contains(BaseCapability.HRM)
+
+                                if (conversationalAwarenessCapability || hrmCapability) {
+                                    StyledList {
+                                        if (listeningModeCapability) {
+                                            styledListItem(
+                                                content = {
                                                     NoiseControlSettings(
                                                         showOffListeningMode = deviceState.controlStates[ControlCommandIdentifier.LISTENING_MODE]?.get(0) == 1.toByte(),
                                                         noiseControlModeValue = deviceState.controlStates[ControlCommandIdentifier.LISTENING_MODE]?.get(0)?.toInt() ?: 2,
@@ -460,14 +502,44 @@ fun DeviceListScreen(
                                                         showLabels = false
                                                     )
                                                 }
-                                            }
+                                            )
+                                        }
+                                        if (conversationalAwarenessCapability) {
+                                            styledToggle(
+                                                label = stringResource(R.string.conversational_awareness),
+                                                checked = deviceState.controlStates[ControlCommandIdentifier.CONVERSATION_DETECT_CONFIG]?.get(
+                                                    0
+                                                ) == 1.toByte(),
+                                                onCheckedChange = { newMode: Boolean ->
+                                                    CoroutineScope(
+                                                        Dispatchers.IO
+                                                    ).launch {
+                                                        (device as AppleDevice).setControlCommand(
+                                                            ControlCommandIdentifier.CONVERSATION_DETECT_CONFIG,
+                                                            newMode
+                                                        )
+                                                    }
+                                                },
+                                                enabled = isPremium
+                                            )
+                                        }
+
+                                        if (hrmCapability) {
+                                            styledListItem(
+                                                contentText = stringResource(R.string.heart_rate),
+                                                supportingText = deviceState.currentHeartRate?.let { "${it.bpm} bpm" },
+                                                onClick = {
+                                                    navigateToHeartRateScreen(
+                                                        macAddress
+                                                    )
+                                                },
+                                            )
                                         }
                                     }
                                 }
                             }
-                        },
-                        orientation = StyledListItemOrientation.Vertical
-                    )
+                        }
+                    }
                 }
             }
 

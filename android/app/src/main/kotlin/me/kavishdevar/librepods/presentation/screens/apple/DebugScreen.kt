@@ -37,7 +37,7 @@ import me.kavishdevar.librepods.devices.PacketDestination
 import me.kavishdevar.librepods.presentation.components.primitives.StyledButton
 import me.kavishdevar.librepods.presentation.components.primitives.StyledInputField
 import me.kavishdevar.librepods.presentation.components.primitives.StyledList
-import me.kavishdevar.librepods.presentation.components.primitives.StyledListItem
+import me.kavishdevar.librepods.presentation.components.primitives.styledListItem
 import me.kavishdevar.librepods.presentation.components.primitives.StyledListItemOrientation
 import me.kavishdevar.librepods.presentation.components.primitives.StyledScaffold
 import me.kavishdevar.librepods.presentation.icons.richText
@@ -160,7 +160,7 @@ fun DebugScreen(
                 title = "Packets ${state.aacpPackets.size}",
             ) {
                 state.aacpPackets.reversed().forEach { packet ->
-                    StyledListItem(
+                    styledListItem(
                         content = {
                             val text = richText(
                                 if (packet.type == AACPPacketType.MESSAGE) {

@@ -47,7 +47,7 @@ import me.kavishdevar.librepods.bluetooth.aacp.types.ControlCommandIdentifier
 import me.kavishdevar.librepods.data.StemAction
 import me.kavishdevar.librepods.presentation.components.primitives.StyledButton
 import me.kavishdevar.librepods.presentation.components.primitives.StyledList
-import me.kavishdevar.librepods.presentation.components.primitives.StyledListItem
+import me.kavishdevar.librepods.presentation.components.primitives.styledListItem
 import me.kavishdevar.librepods.presentation.components.primitives.StyledListItemOrientation
 import me.kavishdevar.librepods.presentation.components.primitives.StyledScaffold
 import me.kavishdevar.librepods.presentation.viewmodel.AppleViewModel
@@ -96,7 +96,7 @@ fun LongPress(
             Spacer(modifier = Modifier.height(topPadding))
 
             StyledList {
-                StyledListItem(
+                styledListItem(
                     contentText = stringResource(R.string.noise_control),
                     selected = longPressAction == StemAction.CYCLE_NOISE_CONTROL_MODES,
                     onClick = {
@@ -107,7 +107,7 @@ fun LongPress(
                     }
                 )
 
-                StyledListItem(
+                styledListItem(
                     contentText = stringResource(R.string.digital_assistant),
                     selected = longPressAction == StemAction.DIGITAL_ASSISTANT,
                     onClick = {
@@ -148,7 +148,7 @@ fun LongPress(
                     description = stringResource(R.string.press_and_hold_noise_control_description)
                 ) {
                     if (state.controlStates[ControlCommandIdentifier.ALLOW_OFF_OPTION]?.get(0) == 1.toByte()) {
-                        StyledListItem(
+                        styledListItem(
                             contentText = stringResource(R.string.off),
                             supportingText = stringResource(R.string.listening_mode_off_description),
                             selected = (currentByte and 0x01) != 0,
@@ -169,7 +169,7 @@ fun LongPress(
                         )
                     }
 
-                    StyledListItem(
+                    styledListItem(
                         contentText = stringResource(R.string.transparency),
                         supportingText = stringResource(R.string.listening_mode_transparency_description),
                         selected = (currentByte and 0x04) != 0,
@@ -189,7 +189,7 @@ fun LongPress(
                         }
                     )
 
-                    StyledListItem(
+                    styledListItem(
                         contentText = stringResource(R.string.adaptive),
                         supportingText = stringResource(R.string.listening_mode_adaptive_description),
                         selected = (currentByte and 0x08) != 0,
@@ -209,7 +209,7 @@ fun LongPress(
                         }
                     )
 
-                    StyledListItem(
+                    styledListItem(
                         contentText = stringResource(R.string.noise_cancellation),
                         supportingText = stringResource(R.string.listening_mode_noise_cancellation_description),
                         selected = (currentByte and 0x02) != 0,

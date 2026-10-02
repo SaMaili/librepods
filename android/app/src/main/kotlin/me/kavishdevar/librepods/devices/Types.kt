@@ -5,7 +5,7 @@ import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.Serializable
 import me.kavishdevar.librepods.utils.redactMac
 
-// TODO: differentiate between bluetooth connected and oem-specific stuff connected. availiable is reserved for BLE based things, hence not used bluetooth connected
+// TODO: differentiate between bluetooth connected and oem-specific stuff connected. available is reserved for BLE based things, hence not used bluetooth connected
 enum class ConnectionState {
     DISCONNECTED,
     DISCONNECTING,

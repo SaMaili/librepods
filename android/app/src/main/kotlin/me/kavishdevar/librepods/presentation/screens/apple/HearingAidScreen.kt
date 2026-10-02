@@ -53,8 +53,9 @@ import me.kavishdevar.librepods.bluetooth.att.types.sendTransparencySettings
 import me.kavishdevar.librepods.presentation.components.primitives.StyledConfirmationDialog
 import me.kavishdevar.librepods.presentation.components.primitives.StyledList
 import me.kavishdevar.librepods.presentation.components.primitives.StyledListItem
+import me.kavishdevar.librepods.presentation.components.primitives.styledListItem
 import me.kavishdevar.librepods.presentation.components.primitives.StyledScaffold
-import me.kavishdevar.librepods.presentation.components.primitives.StyledToggle
+import me.kavishdevar.librepods.presentation.components.primitives.styledToggle
 import me.kavishdevar.librepods.presentation.viewmodel.AppleViewModel
 
 private const val TAG = "HearingAidScreen"
@@ -122,12 +123,12 @@ fun HearingAidScreen(
 //            }
 
             StyledList (title = stringResource(R.string.hearing_aid)) {
-                StyledToggle(
+                styledToggle(
                     label = stringResource(R.string.hearing_aid),
                     checked = hearingAidEnabled.value,
                     onCheckedChange = { hearingAidEnabled.value = it },
                 )
-                StyledListItem(
+                styledListItem(
                     contentText = stringResource(R.string.adjustments),
                     onClick = navigateToHearingAidAdjustments,
                 )

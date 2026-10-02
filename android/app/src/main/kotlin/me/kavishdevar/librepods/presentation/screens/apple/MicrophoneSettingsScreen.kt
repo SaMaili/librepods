@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.bluetooth.aacp.types.ControlCommandIdentifier
 import me.kavishdevar.librepods.presentation.components.primitives.StyledList
-import me.kavishdevar.librepods.presentation.components.primitives.StyledListItem
+import me.kavishdevar.librepods.presentation.components.primitives.styledListItem
 import me.kavishdevar.librepods.presentation.components.primitives.StyledScaffold
 import me.kavishdevar.librepods.presentation.viewmodel.AppleViewModel
 
@@ -65,19 +65,19 @@ fun MicrophoneSettingsScreen(
             Spacer(modifier = Modifier.height(topPadding))
 
             StyledList {
-                StyledListItem(
+                styledListItem(
                     contentText = stringResource(R.string.microphone_automatic),
                     selected = selectedMode == 0,
                     onClick = { onMicrophoneSettingsChanged(0) }
                 )
 
-                StyledListItem(
+                styledListItem(
                     contentText = stringResource(R.string.microphone_always_right),
                     selected = selectedMode == 1,
                     onClick = { onMicrophoneSettingsChanged(1) }
                 )
 
-                StyledListItem(
+                styledListItem(
                     contentText = stringResource(R.string.microphone_always_left),
                     selected = selectedMode == 2,
                     onClick = { onMicrophoneSettingsChanged(2) }

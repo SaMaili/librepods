@@ -45,13 +45,13 @@ import androidx.health.connect.client.records.HeartRateRecord
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.rememberPermissionState
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.presentation.components.primitives.StyledList
 import me.kavishdevar.librepods.presentation.components.primitives.StyledListItem
+import me.kavishdevar.librepods.presentation.components.primitives.styledListItem
 import me.kavishdevar.librepods.presentation.components.primitives.StyledListItemOrientation
 import me.kavishdevar.librepods.presentation.icons.MaterialIcons
 
@@ -155,7 +155,7 @@ fun PermissionsPage(
                     if (bluetoothPermissionsState.allPermissionsGranted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
                 )
 
-                StyledListItem(
+                styledListItem(
                     contentText = stringResource(R.string.bluetooth),
                     onClick = if (!bluetoothPermissionsState.allPermissionsGranted) {
                         {
@@ -198,7 +198,7 @@ fun PermissionsPage(
                     if (phonePermissionState.allPermissionsGranted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
                 )
 
-                StyledListItem(
+                styledListItem(
                     contentText = stringResource(R.string.notifications),
                     onClick = if (!notificationPermissionState.status.isGranted) {
                         {
@@ -228,7 +228,7 @@ fun PermissionsPage(
                         }
                     },
                 )
-                StyledListItem(
+                styledListItem(
                     contentText = stringResource(R.string.phone),
                     onClick = if (!phonePermissionState.allPermissionsGranted) {
                         {

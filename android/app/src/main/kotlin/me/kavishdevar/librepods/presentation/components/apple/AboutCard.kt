@@ -29,11 +29,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.presentation.components.primitives.StyledList
-import me.kavishdevar.librepods.presentation.components.primitives.StyledListItem
+import me.kavishdevar.librepods.presentation.components.primitives.styledListItem
 import me.kavishdevar.librepods.presentation.icons.richText
-import me.kavishdevar.librepods.presentation.theme.DesignSystem
-import me.kavishdevar.librepods.presentation.theme.LibrePodsTheme
-import me.kavishdevar.librepods.presentation.theme.LocalDesignSystem
+import me.kavishdevar.librepods.presentation.design.DesignSystem
+import me.kavishdevar.librepods.presentation.design.LibrePodsTheme
+import me.kavishdevar.librepods.presentation.design.LocalDesignSystem
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 @Composable
@@ -53,17 +53,17 @@ fun AboutCard(
     val serialNumber = remember { mutableIntStateOf(0) }
 
     StyledList(title = stringResource(R.string.about)) {
-        StyledListItem(
+        styledListItem(
             contentText = stringResource(R.string.model_name),
             supportingText = modelName
         )
 
-        StyledListItem(
+        styledListItem(
             contentText = stringResource(R.string.model_number),
             supportingText = actualModel
         )
 
-        StyledListItem(
+        styledListItem(
             contentText = stringResource(R.string.serial_number),
             supportingContent = {
                 Text(
@@ -77,13 +77,13 @@ fun AboutCard(
         )
 
         if (version != null) {
-            StyledListItem(
+            styledListItem(
                 contentText = stringResource(R.string.version),
                 supportingText = version,
                 onClick = navigateToVersion,
             )
         } else {
-            StyledListItem(
+            styledListItem(
                 contentText = stringResource(R.string.version),
                 onClick = navigateToVersion,
             )

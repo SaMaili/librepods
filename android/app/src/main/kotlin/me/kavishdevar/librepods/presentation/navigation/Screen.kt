@@ -123,6 +123,12 @@ sealed interface Screen: NavKey {
     data class HeartRate(
         override val macAddress: MacAddress
     ): DeviceScreen
+
+    @Serializable
+    data object AppAccessibilitySettings: Screen
+
+    @Serializable
+    data object AppAppearance: Screen
 }
 
 @Serializable

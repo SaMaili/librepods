@@ -51,6 +51,7 @@ import me.kavishdevar.librepods.devices.BaseCapability
 import me.kavishdevar.librepods.presentation.components.primitives.StyledButton
 import me.kavishdevar.librepods.presentation.components.primitives.StyledList
 import me.kavishdevar.librepods.presentation.components.primitives.StyledListItem
+import me.kavishdevar.librepods.presentation.components.primitives.styledListItem
 import me.kavishdevar.librepods.presentation.components.primitives.StyledScaffold
 import me.kavishdevar.librepods.presentation.components.primitives.StyledSlider
 import me.kavishdevar.librepods.presentation.components.primitives.StyledToggle
@@ -194,7 +195,7 @@ fun AccessibilitySettingsScreen(
                 description = stringResource(R.string.press_speed_description)
             ) {
                 pressSpeedOptions.forEach { (value, label) ->
-                    StyledListItem(
+                    styledListItem(
                         contentText = label,
                         selected = selectedPressSpeed == label,
                         onClick = {
@@ -214,7 +215,7 @@ fun AccessibilitySettingsScreen(
                 description = stringResource(R.string.press_and_hold_duration_description)
             ) {
                 pressAndHoldDurationOptions.forEach { (value, label) ->
-                    StyledListItem(
+                    styledListItem(
                         contentText = label,
                         selected = selectedPressAndHoldDuration == label,
                         onClick = {
@@ -319,7 +320,7 @@ fun AccessibilitySettingsScreen(
                     description = stringResource(R.string.volume_swipe_speed_description)
                 ) {
                     volumeSwipeSpeedOptions.forEach { (value, label) ->
-                        StyledListItem(
+                        styledListItem(
                             contentText = label,
                             selected = selectedVolumeSwipeSpeed == label,
                             onClick = {

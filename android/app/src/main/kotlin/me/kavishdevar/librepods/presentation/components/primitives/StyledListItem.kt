@@ -39,6 +39,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemColors
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
@@ -62,11 +63,11 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import me.kavishdevar.librepods.presentation.design.DesignSystem
+import me.kavishdevar.librepods.presentation.design.LocalDesignSystem
+import me.kavishdevar.librepods.presentation.design.sectionHeader
 import me.kavishdevar.librepods.presentation.icons.LocalIcons
 import me.kavishdevar.librepods.presentation.icons.richText
-import me.kavishdevar.librepods.presentation.theme.DesignSystem
-import me.kavishdevar.librepods.presentation.theme.LocalDesignSystem
-import me.kavishdevar.librepods.presentation.theme.sectionHeader
 
 @Composable
 fun StyledListItem(
@@ -111,7 +112,7 @@ fun StyledListItem(
                 Text(
                     text = it,
                     color = if (m3eEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.sectionHeader,
-                    style = MaterialTheme.typography.labelSmallEmphasized
+                    style = MaterialTheme.typography.bodyMediumEmphasized
                 )
             }
         }
@@ -184,7 +185,7 @@ fun StyledListItem(
                 Text(
                     text = it,
                     color = if (m3eEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.sectionHeader,
-                    style = MaterialTheme.typography.labelSmallEmphasized
+                    style = MaterialTheme.typography.bodyMediumEmphasized
                 )
             }
         }
@@ -213,7 +214,7 @@ fun StyledListItem(
                         DesignSystem.Material -> {
                             Text(
                                 text = contentText,
-                                style = MaterialTheme.typography.labelMediumEmphasized,
+                                style = MaterialTheme.typography.bodyMediumEmphasized,
                             )
                         }
                     }
@@ -275,7 +276,7 @@ fun StyledListItem(
                 Text(
                     text = it,
                     color = if (m3eEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.sectionHeader,
-                    style = MaterialTheme.typography.labelSmallEmphasized
+                    style = MaterialTheme.typography.bodyMediumEmphasized
                 )
             }
         }
@@ -304,7 +305,7 @@ fun StyledListItem(
                         DesignSystem.Material -> {
                             Text(
                                 text = contentText,
-                                style = MaterialTheme.typography.labelMediumEmphasized,
+                                style = MaterialTheme.typography.bodyMediumEmphasized,
                             )
                         }
                     }
@@ -366,7 +367,7 @@ fun StyledListItem(
                 Text(
                     text = it,
                     color = if (m3eEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.sectionHeader,
-                    style = MaterialTheme.typography.labelSmallEmphasized
+                    style = MaterialTheme.typography.bodyMediumEmphasized
                 )
             }
         }
@@ -395,7 +396,7 @@ fun StyledListItem(
                         DesignSystem.Material -> {
                             Text(
                                 text = contentText,
-                                style = MaterialTheme.typography.labelMediumEmphasized,
+                                style = MaterialTheme.typography.bodyMediumEmphasized,
                             )
                         }
                     }
@@ -437,7 +438,7 @@ fun StyledListItem(
 }
 
 @Composable
-fun StyledListScope.StyledListItem(
+fun StyledListScope.styledListItem(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     contentText: String,
@@ -479,7 +480,7 @@ fun StyledListScope.StyledListItem(
                     DesignSystem.Material -> {
                         Text(
                             text = contentText,
-                            style = MaterialTheme.typography.labelMediumEmphasized,
+                            style = MaterialTheme.typography.bodyMediumEmphasized,
                         )
                     }
                 }
@@ -498,7 +499,7 @@ fun StyledListScope.StyledListItem(
 }
 
 @Composable
-fun StyledListScope.StyledListItem(
+fun StyledListScope.styledListItem(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
@@ -544,7 +545,7 @@ fun StyledListScope.StyledListItem(
 }
 
 @Composable
-fun StyledListScope.StyledListItem(
+fun StyledListScope.styledListItem(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     contentText: String,
@@ -587,7 +588,7 @@ fun StyledListScope.StyledListItem(
                     DesignSystem.Material -> {
                         Text(
                             text = contentText,
-                            style = MaterialTheme.typography.labelMediumEmphasized,
+                            style = MaterialTheme.typography.bodyMediumEmphasized,
                         )
                     }
                 }
@@ -607,7 +608,7 @@ fun StyledListScope.StyledListItem(
 }
 
 @Composable
-fun StyledListScope.StyledListItem(
+fun StyledListScope.styledListItem(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     contentText: String,
@@ -650,7 +651,7 @@ fun StyledListScope.StyledListItem(
                     DesignSystem.Material -> {
                         Text(
                             text = contentText,
-                            style = MaterialTheme.typography.labelMediumEmphasized,
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                     }
                 }
@@ -660,7 +661,7 @@ fun StyledListScope.StyledListItem(
                         Text(
                             text = supportingText,
                             style = if (LocalDesignSystem.current == DesignSystem.Apple && orientation == StyledListItemOrientation.Horizontal) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall,
-                            color = if (selected == true && LocalDesignSystem.current == DesignSystem.Material) MaterialTheme.colorScheme.onPrimaryContainer.copy(0.7f) else MaterialTheme.colorScheme.onSurface.copy(0.7f), // TODO: move to color scheme
+                            color = if (LocalDesignSystem.current == DesignSystem.Material) LocalContentColor.current.copy(0.7f) else MaterialTheme.colorScheme.onSurface.copy(0.7f), // TODO: move to color scheme
                         )
                     }
                 } else null,
@@ -677,6 +678,7 @@ fun StyledListScope.StyledListItem(
     }
 }
 
+// TODO: get rid of this, Apple dynamically arranges
 enum class StyledListItemOrientation{
     Horizontal,
     Vertical

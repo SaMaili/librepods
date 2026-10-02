@@ -31,7 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.presentation.components.primitives.StyledList
-import me.kavishdevar.librepods.presentation.components.primitives.StyledListItem
+import me.kavishdevar.librepods.presentation.components.primitives.styledListItem
 import me.kavishdevar.librepods.presentation.components.primitives.StyledScaffold
 import me.kavishdevar.librepods.presentation.viewmodel.AppleViewModel
 
@@ -55,19 +55,19 @@ fun VersionScreen(
         ) {
             Spacer(modifier = Modifier.height(topPadding))
             StyledList(title = stringResource(R.string.version)) {
-                StyledListItem(
+                styledListItem(
                     contentText = stringResource(R.string.version) + " 1",
                     supportingText = metadata.version1,
                     enabled = false
                 )
 
-                StyledListItem(
+                styledListItem(
                     contentText = stringResource(R.string.version) + " 2",
                     supportingText = metadata.version2,
                     enabled = false
                 )
 
-                StyledListItem(
+                styledListItem(
                     contentText = stringResource(R.string.version) + " 3",
                     supportingText = metadata.version3,
                     enabled = false

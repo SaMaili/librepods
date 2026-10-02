@@ -23,30 +23,30 @@ import androidx.compose.ui.res.stringResource
 import me.kavishdevar.librepods.BuildConfig
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.presentation.components.primitives.StyledList
-import me.kavishdevar.librepods.presentation.components.primitives.StyledListItem
+import me.kavishdevar.librepods.presentation.components.primitives.styledListItem
 
 @Composable
 fun AppInfoCard(
     navigateToReleaseNotesScreen: (() -> Unit)? = null,
 ) {
     StyledList(title = stringResource(R.string.about)) {
-        StyledListItem(
+        styledListItem(
             contentText = stringResource(R.string.version),
             supportingText = BuildConfig.VERSION_NAME,
             onClick = navigateToReleaseNotesScreen
         )
 
-        StyledListItem(
+        styledListItem(
             contentText = stringResource(R.string.version_code),
             supportingText = BuildConfig.VERSION_CODE.toString(),
         )
 
-        StyledListItem(
+        styledListItem(
             contentText = stringResource(R.string.flavor),
             supportingText = BuildConfig.FLAVOR,
         )
 
-        StyledListItem(
+        styledListItem(
             contentText = stringResource(R.string.build_type),
             supportingText = BuildConfig.BUILD_TYPE,
         )

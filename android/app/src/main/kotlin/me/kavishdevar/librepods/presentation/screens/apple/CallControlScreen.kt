@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.bluetooth.aacp.types.ControlCommandIdentifier
 import me.kavishdevar.librepods.presentation.components.primitives.StyledList
-import me.kavishdevar.librepods.presentation.components.primitives.StyledListItem
+import me.kavishdevar.librepods.presentation.components.primitives.styledListItem
 import me.kavishdevar.librepods.presentation.components.primitives.StyledScaffold
 import me.kavishdevar.librepods.presentation.viewmodel.AppleViewModel
 
@@ -67,7 +67,7 @@ fun CallControlScreen(
             Spacer(modifier = Modifier.height(topPadding))
 
             StyledList {
-                StyledListItem(
+                styledListItem(
                     contentText = pressOnceText,
                     selected = pressOnceIsAction,
                     onClick = {
@@ -76,7 +76,7 @@ fun CallControlScreen(
                     }
                 )
 
-                StyledListItem(
+                styledListItem(
                     contentText = pressTwiceText,
                     selected = !pressOnceIsAction,
                     onClick = {

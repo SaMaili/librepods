@@ -5,8 +5,8 @@ import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.presentation.screens.apple.AppleSettingsScreenPreviewMaterial
 import me.kavishdevar.librepods.presentation.screens.apple.EqualizerScreenPreviewApple
 import me.kavishdevar.librepods.presentation.screens.apple.EqualizerScreenPreviewMaterial
-import me.kavishdevar.librepods.presentation.theme.DesignSystem
-import me.kavishdevar.librepods.presentation.theme.LocalDesignSystem
+import me.kavishdevar.librepods.presentation.design.DesignSystem
+import me.kavishdevar.librepods.presentation.design.LocalDesignSystem
 
 val update1_0_0 = listOf(
         UpdateItem(

@@ -39,11 +39,11 @@ import me.kavishdevar.librepods.database.widget.WidgetConfigEntity
 import me.kavishdevar.librepods.devices.Device
 import me.kavishdevar.librepods.presentation.components.primitives.StyledButton
 import me.kavishdevar.librepods.presentation.components.primitives.StyledList
-import me.kavishdevar.librepods.presentation.components.primitives.StyledListItem
+import me.kavishdevar.librepods.presentation.components.primitives.styledListItem
 import me.kavishdevar.librepods.presentation.components.primitives.StyledScaffold
 import me.kavishdevar.librepods.presentation.icons.LocalIcons
-import me.kavishdevar.librepods.presentation.theme.LibrePodsTheme
-import me.kavishdevar.librepods.presentation.theme.NightTheme
+import me.kavishdevar.librepods.presentation.design.LibrePodsTheme
+import me.kavishdevar.librepods.presentation.design.NightTheme
 import me.kavishdevar.librepods.services.LibrePodsService
 
 class NoiseControlWidgetConfigurationActivity: ComponentActivity() {
@@ -193,7 +193,7 @@ private fun WidgetDevicePickerContent(
                     devices.forEach { device ->
                         val metadata by device.value.metadata.collectAsState()
 
-                        StyledListItem(
+                        styledListItem(
                             contentText = metadata.name,
                             supportingText = device.key.value,
                             leadingContent = {

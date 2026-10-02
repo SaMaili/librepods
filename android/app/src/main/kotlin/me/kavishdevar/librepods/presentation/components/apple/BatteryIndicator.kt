@@ -53,8 +53,8 @@ import androidx.compose.ui.unit.sp
 import me.kavishdevar.librepods.devices.BatteryStatus
 import me.kavishdevar.librepods.presentation.icons.LocalIcons
 import me.kavishdevar.librepods.presentation.icons.richText
-import me.kavishdevar.librepods.presentation.theme.DesignSystem
-import me.kavishdevar.librepods.presentation.theme.LibrePodsTheme
+import me.kavishdevar.librepods.presentation.design.DesignSystem
+import me.kavishdevar.librepods.presentation.design.LibrePodsTheme
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin

@@ -354,4 +354,12 @@
     <string name="high_heart_rate">High heart rate</string>
     <string name="hrm_alert_warning">This alert does not currently account for exercise or physical activity. It is for informational purposes only and is not intended as medical advice.</string>
     <string name="heart_rate_alerts_disabled_warning">Alerts have been disabled until reconnection or re-enabling heart rate monitoring.</string>
+    <string name="differentiate_without_color">Differentiate without color</string>
+    <string name="fon">Font</string>
+    <string name="font">Font</string>
+    <string name="inter">Inter</string>
+    <string name="roboto_flex_expressive">Roboto Flex (Expressive)</string>
+    <string name="roboto_flex">Roboto Flex</string>
+    <string name="text_scale">Font scale</string>
+    <string name="font_scale">Font scale</string>
 </resources>

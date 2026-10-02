@@ -43,7 +43,7 @@ import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.presentation.components.primitives.MaterialButtonStyle
 import me.kavishdevar.librepods.presentation.components.primitives.StyledButton
 import me.kavishdevar.librepods.presentation.components.primitives.StyledList
-import me.kavishdevar.librepods.presentation.components.primitives.StyledListItem
+import me.kavishdevar.librepods.presentation.components.primitives.styledListItem
 import me.kavishdevar.librepods.presentation.components.primitives.StyledListItemOrientation
 import me.kavishdevar.librepods.presentation.components.primitives.StyledScaffold
 import me.kavishdevar.librepods.presentation.viewmodel.PurchaseViewModel
@@ -81,21 +81,21 @@ fun PurchaseScreen(
             }
             if (!state.isPremium) {
                 StyledList(title = stringResource(R.string.free_features)) {
-                    StyledListItem(
+                    styledListItem(
                         contentText =  stringResource(R.string.ear_detection),
                         supportingText =  stringResource(R.string.ear_detection_description),
                         enabled = false,
                         orientation = StyledListItemOrientation.Vertical
                     )
 
-                    StyledListItem(
+                    styledListItem(
                         contentText =  stringResource(R.string.battery),
                         supportingText =  stringResource(R.string.battery_description),
                         enabled = false,
                         orientation = StyledListItemOrientation.Vertical
                     )
 
-                    StyledListItem(
+                    styledListItem(
                         contentText =  stringResource(R.string.noise_control),
                         supportingText =  stringResource(R.string.noise_control_description),
                         enabled = false,
@@ -103,7 +103,7 @@ fun PurchaseScreen(
                     )
 
                     if (XposedState.isAvailable) {
-                        StyledListItem(
+                        styledListItem(
                             contentText =  "${stringResource(R.string.hearing_aid)} (${stringResource(R.string.requires_xposed)})",
                             supportingText =  stringResource(R.string.hearing_aid_description)
                                 .substringBefore("\n\n"),
@@ -116,49 +116,49 @@ fun PurchaseScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 StyledList(title = stringResource(R.string.advanced_features), description =  stringResource(R.string.feature_availability_disclaimer)) {
-                    StyledListItem(
+                    styledListItem(
                         contentText =  stringResource(R.string.conversational_awareness),
                         supportingText =  stringResource(R.string.conversational_awareness_description),
                         enabled = false,
                         orientation = StyledListItemOrientation.Vertical
                     )
 
-                    StyledListItem(
+                    styledListItem(
                         contentText =  stringResource(R.string.digital_assistant_on_long_press),
                         supportingText =  stringResource(R.string.digital_assistant_on_long_press_description),
                         enabled = false,
                         orientation = StyledListItemOrientation.Vertical
                     )
 
-                    StyledListItem(
+                    styledListItem(
                         contentText =  stringResource(R.string.head_gestures),
                         supportingText =  stringResource(R.string.head_gestures_details),
                         enabled = false,
                         orientation = StyledListItemOrientation.Vertical
                     )
 
-                    StyledListItem(
+                    styledListItem(
                         contentText =  stringResource(R.string.advanced_device_settings),
                         supportingText =  stringResource(R.string.advanced_device_settings_description),
                         enabled = false,
                         orientation = StyledListItemOrientation.Vertical
                     )
 
-                    StyledListItem(
+                    styledListItem(
                         contentText =  stringResource(R.string.automatic_connection),
                         supportingText =  stringResource(R.string.automatic_connection_description),
                         enabled = false,
                         orientation = StyledListItemOrientation.Vertical
                     )
 
-                    StyledListItem(
+                    styledListItem(
                         contentText =  stringResource(R.string.customizations),
                         supportingText =  stringResource(R.string.customizations_description),
                         enabled = false,
                         orientation = StyledListItemOrientation.Vertical
                     )
 
-                    StyledListItem(
+                    styledListItem(
                         contentText =  stringResource(R.string.support_the_development),
                         supportingText =  stringResource(R.string.support_development_description),
                         enabled = false,

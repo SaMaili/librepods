@@ -29,7 +29,7 @@ import androidx.compose.ui.res.stringResource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.presentation.components.primitives.StyledList
-import me.kavishdevar.librepods.presentation.components.primitives.StyledListItem
+import me.kavishdevar.librepods.presentation.components.primitives.styledListItem
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 @ExperimentalHazeMaterialsApi
@@ -48,19 +48,19 @@ fun CallControlSettings(
     val hangUpText = stringResource(R.string.hang_up)
 
     StyledList(title = stringResource(R.string.call_controls)) {
-        StyledListItem(
+        styledListItem(
             contentText = stringResource(R.string.answer_call),
             supportingText = stringResource(R.string.press_once),
             enabled = false
         )
 
-        StyledListItem(
+        styledListItem(
             contentText = muteUnmuteText,
             supportingText = singlePressAction,
             onClick = { navigateToCallControlScreen(muteUnmuteText) },
         )
 
-        StyledListItem(
+        styledListItem(
             contentText = hangUpText,
             supportingText = doublePressAction,
             onClick = { navigateToCallControlScreen(hangUpText) }

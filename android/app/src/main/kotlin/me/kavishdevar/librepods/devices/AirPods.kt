@@ -390,8 +390,21 @@ object AirPodsSpecs {
             name = "Unknown AirPods",
             displayName = "Unknown AirPods",
             components = emptySet(),
-            genericIconName = "AirPods1",
-            baseCapabilities = emptySet()
+            genericIconName = "AirPodsMax2",
+            baseCapabilities = setOf(
+                BaseCapability.LISTENING_MODE,
+                BaseCapability.CONVERSATION_AWARENESS,
+                BaseCapability.HEAD_GESTURES,
+                BaseCapability.STEM_CONFIG,
+                BaseCapability.LOUD_SOUND_REDUCTION,
+                BaseCapability.PPE,
+                BaseCapability.SLEEP_DETECTION,
+                BaseCapability.HEARING_AID,
+                BaseCapability.ADAPTIVE_AUDIO,
+                BaseCapability.ADAPTIVE_VOLUME,
+                BaseCapability.SWIPE_FOR_VOLUME,
+                BaseCapability.HRM
+            )
         )
     )
     fun getSpec(model: AirPodsModel): AirPodsSpec = specs[model] ?: specs[AirPodsModel.UNKNOWN]!!

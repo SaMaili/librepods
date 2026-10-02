@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-package me.kavishdevar.librepods.presentation.theme
+package me.kavishdevar.librepods.presentation.design
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
@@ -30,6 +30,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import me.kavishdevar.librepods.data.app.AccessibilitySettings
+import me.kavishdevar.librepods.data.app.FontFamilyOption
+import me.kavishdevar.librepods.data.app.FontSettings
+import me.kavishdevar.librepods.presentation.design.typography.InterTypography
+import me.kavishdevar.librepods.presentation.design.typography.RobotoFlexExpressiveTypography
+import me.kavishdevar.librepods.presentation.design.typography.RobotoFlexTypography
 import me.kavishdevar.librepods.presentation.icons.AppleIcons
 import me.kavishdevar.librepods.presentation.icons.LocalIcons
 import me.kavishdevar.librepods.presentation.icons.MaterialIcons
@@ -78,6 +84,8 @@ fun LibrePodsTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     designSystem: DesignSystem = DesignSystem.Material,
     overrideMaterialColor: Color? = null,
+    accessibilitySettings: AccessibilitySettings = AccessibilitySettings(),
+    fontSettings: FontSettings = FontSettings(),
     content: @Composable () -> Unit
 ) {
     val colorScheme = when(designSystem) {
@@ -88,24 +96,21 @@ fun LibrePodsTheme(
         DesignSystem.Apple -> if (darkTheme) AppleDarkColorScheme else AppleLightColorScheme
     }
 
-    val typography = when(designSystem) {
-        DesignSystem.Material -> MaterialTypography
-        DesignSystem.Apple -> AppleTypography
+    val typography = when(fontSettings.fontFamilyOption) {
+        FontFamilyOption.SystemDefault -> null
+        FontFamilyOption.RobotoFlex -> RobotoFlexTypography
+        FontFamilyOption.RobotoFlexExpressive -> RobotoFlexExpressiveTypography
+        FontFamilyOption.Inter -> InterTypography
     }
 
     CompositionLocalProvider(
         LocalDesignSystem provides designSystem,
+        LocalAccessibilitySettings provides accessibilitySettings,
         LocalIcons provides when (designSystem) {
             DesignSystem.Material -> MaterialIcons
             DesignSystem.Apple -> AppleIcons
         }
     ) {
-//        var colorScheme = colorScheme
-//
-//        if (designSystem == DesignSystem.Material) {
-//
-//        }
-
         MaterialExpressiveTheme(
             colorScheme = colorScheme,
             motionScheme = MotionScheme.expressive(),

@@ -72,10 +72,9 @@ import me.kavishdevar.librepods.presentation.components.primitives.StyledList
 import me.kavishdevar.librepods.presentation.components.primitives.StyledListItem
 import me.kavishdevar.librepods.presentation.components.primitives.StyledListItemOrientation
 import me.kavishdevar.librepods.presentation.components.primitives.StyledScaffold
-import me.kavishdevar.librepods.presentation.components.primitives.StyledToggle
+import me.kavishdevar.librepods.presentation.components.primitives.styledListItem
+import me.kavishdevar.librepods.presentation.components.primitives.styledToggle
 import me.kavishdevar.librepods.presentation.icons.LocalIcons
-import me.kavishdevar.librepods.presentation.theme.DesignSystem
-import me.kavishdevar.librepods.presentation.theme.NightTheme
 import me.kavishdevar.librepods.presentation.viewmodel.AppSettingsViewModel
 import me.kavishdevar.librepods.utils.XposedState
 import java.util.concurrent.TimeUnit
@@ -87,7 +86,9 @@ fun AppSettingsScreen(
     navigateToPurchase: () -> Unit,
     navigateToOpenSourceLicenses: () -> Unit,
     navigateToReleaseNotesScreen: () -> Unit,
-    navigateToBleSettingsScreen: () -> Unit
+    navigateToBleSettingsScreen: () -> Unit,
+    navigateToAppAppearanceScreen: () -> Unit,
+    navigateToAppAccessibilityScreen: () -> Unit
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
@@ -114,6 +115,8 @@ fun AppSettingsScreen(
                 .padding(horizontal = 16.dp)
         ) {
             Spacer(modifier = Modifier.height(topPadding))
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             if (!state.isPremium && state.state.hasConnectedToAACP) {
                 StyledButton(
@@ -163,51 +166,15 @@ fun AppSettingsScreen(
             }
 
             if (state.state.hasConnectedToAACP) {
-                StyledList(title = stringResource(R.string.appearance)) {
-                    StyledListItem(
-                        contentText = stringResource(R.string.light),
-                        selected = state.settings.nightMode == NightTheme.Light,
-                        onClick = { viewModel.updateSettings { it.copy(nightMode = NightTheme.Light) } },
-                        enabled = state.isPremium
-                    )
-
-                    StyledListItem(
-                        contentText = stringResource(R.string.system),
-                        selected = state.settings.nightMode == NightTheme.System,
-                        onClick = { viewModel.updateSettings { it.copy(nightMode = NightTheme.System) } },
-                        enabled = state.isPremium
-                    )
-
-                    StyledListItem(
-                        contentText = stringResource(R.string.dark),
-                        selected = state.settings.nightMode == NightTheme.Dark,
-                        onClick = { viewModel.updateSettings { it.copy(nightMode = NightTheme.Dark) } },
-                        enabled = state.isPremium
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                StyledList(title = stringResource(R.string.design_system)) {
-                    StyledListItem(
-                        contentText = stringResource(R.string.apple),
-                        selected = state.settings.designSystem == DesignSystem.Apple,
-                        onClick = { viewModel.updateSettings { it.copy(designSystem = DesignSystem.Apple) } },
-                        enabled = state.isPremium
-                    )
-
-                    StyledListItem(
-                        contentText = stringResource(R.string.material3e),
-                        selected = state.settings.designSystem == DesignSystem.Material,
-                        onClick = { viewModel.updateSettings { it.copy(designSystem = DesignSystem.Material) } },
-                        enabled = state.isPremium
-                    )
-                }
+                StyledListItem(
+                    contentText = stringResource(R.string.appearance),
+                    onClick = navigateToAppAppearanceScreen
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 StyledList(title = stringResource(R.string.interaction)) {
-                    StyledToggle(
+                    styledToggle(
                         label = stringResource(R.string.swipe_anywhere_to_go_back),
                         checked = state.settings.swipeAnywhereForBack,
                         onCheckedChange = { checked ->
@@ -217,7 +184,7 @@ fun AppSettingsScreen(
                         },
                     )
 
-                    StyledToggle(
+                    styledToggle(
                         label = stringResource(R.string.use_highest_refresh_rate),
                         checked = state.settings.useHighestRefreshRate,
                         onCheckedChange = { checked ->
@@ -231,6 +198,13 @@ fun AppSettingsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            StyledListItem(
+                contentText = stringResource(R.string.accessibility),
+                onClick = navigateToAppAccessibilityScreen
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             StyledList(
                 title = stringResource(R.string.advanced_options),
                 description = stringResource(R.string.do_not_change)
@@ -238,7 +212,7 @@ fun AppSettingsScreen(
                 if (XposedState.isAvailable && XposedState.bluetoothScopeEnabled) {
                     val restartBluetoothText =
                         stringResource(R.string.found_offset_restart_bluetooth)
-                    StyledToggle(
+                    styledToggle(
                         label = stringResource(R.string.act_as_an_apple_device) + " (${
                             stringResource(
                                 R.string.requires_xposed
@@ -253,7 +227,7 @@ fun AppSettingsScreen(
                     )
                 }
 
-                StyledToggle(
+                styledToggle(
                     label = stringResource(R.string.enable_debug_mode),
                     description = stringResource(R.string.debug_mode_description),
                     checked = state.settings.debugMode,
@@ -264,7 +238,7 @@ fun AppSettingsScreen(
                     }
                 )
 
-                StyledListItem(
+                styledListItem(
                     contentText = stringResource(R.string.ble_settings),
                     orientation = StyledListItemOrientation.Vertical,
                     onClick = navigateToBleSettingsScreen
@@ -274,7 +248,7 @@ fun AppSettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             StyledList(title = stringResource(R.string.contact)) {
-                StyledListItem(
+                styledListItem(
                     contentText =  stringResource(R.string.email),
                     supportingText = stringResource(R.string.contact_email_supporting_text),
                     orientation = StyledListItemOrientation.Vertical,
@@ -283,7 +257,7 @@ fun AppSettingsScreen(
 
                 val errorOpeningDiscordInviteText = stringResource(R.string.error_opening_discord_invite)
 
-                StyledListItem(
+                styledListItem(
                     contentText =  stringResource(R.string.discord),
                     supportingText = stringResource(R.string.contact_discord_supporting_text),
                     orientation = StyledListItemOrientation.Vertical,
@@ -305,7 +279,7 @@ fun AppSettingsScreen(
 
                 val errorOpeningGitHubLink = stringResource(R.string.error_opening_github_link)
 
-                StyledListItem(
+                styledListItem(
                     contentText =  stringResource(R.string.github_issues),
                     supportingText = stringResource(R.string.contact_github_supporting_text),
                     orientation = StyledListItemOrientation.Vertical,

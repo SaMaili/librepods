@@ -51,9 +51,9 @@ import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import me.kavishdevar.librepods.BuildConfig
 import me.kavishdevar.librepods.LibrePodsApplication
+import me.kavishdevar.librepods.presentation.design.LibrePodsTheme
+import me.kavishdevar.librepods.presentation.design.NightTheme
 import me.kavishdevar.librepods.presentation.navigation.NavigationRoot
-import me.kavishdevar.librepods.presentation.theme.LibrePodsTheme
-import me.kavishdevar.librepods.presentation.theme.NightTheme
 import me.kavishdevar.librepods.repository.AppDataRepository
 import me.kavishdevar.librepods.services.LibrePodsService
 import me.kavishdevar.librepods.utils.XposedState
@@ -116,6 +116,8 @@ class MainActivity : ComponentActivity() {
             LibrePodsTheme(
                 designSystem = settings.designSystem,
                 overrideMaterialColor = settings.overrideMaterialColor,
+                accessibilitySettings = settings.accessibilitySettings,
+                fontSettings = settings.fontSettings,
                 darkTheme = darkTheme
             ) {
 //                For demo screenshots

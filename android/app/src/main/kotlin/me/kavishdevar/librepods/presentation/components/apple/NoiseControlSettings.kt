@@ -76,10 +76,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.devices.NoiseControlMode
-import me.kavishdevar.librepods.presentation.theme.DesignSystem
-import me.kavishdevar.librepods.presentation.theme.LibrePodsTheme
-import me.kavishdevar.librepods.presentation.theme.LocalDesignSystem
-import me.kavishdevar.librepods.presentation.theme.sectionHeader
+import me.kavishdevar.librepods.presentation.design.DesignSystem
+import me.kavishdevar.librepods.presentation.design.LibrePodsTheme
+import me.kavishdevar.librepods.presentation.design.LocalDesignSystem
+import me.kavishdevar.librepods.presentation.design.sectionHeader
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.math.roundToInt
 
@@ -163,13 +163,14 @@ fun NoiseControlSettings(
                                     options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
                                     else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
                                 },
-                                colors = ToggleButtonDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                                colors = ToggleButtonDefaults.colors(containerColor = if (showLabels) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.secondaryContainer),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Icon(
                                     bitmap = ImageBitmap.imageResource(iconRes),
                                     contentDescription = null,
-                                    modifier = Modifier.size(42.dp)
+                                    modifier = Modifier.size(42.dp),
+                                    tint = if (selectedMode == mode) MaterialTheme.colorScheme.onPrimary else if (showLabels) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSecondaryContainer
                                 )
                             }
 
@@ -253,10 +254,10 @@ fun NoiseControlSettings(
                 Text(
                     text = stringResource(R.string.noise_control),
                     color = MaterialTheme.colorScheme.sectionHeader,
-                    style = MaterialTheme.typography.labelSmallEmphasized,
+                    style = MaterialTheme.typography.bodyMediumEmphasized,
                     modifier = Modifier
                         .padding(horizontal = 16.dp)
-                        .padding(top = 4.dp, bottom = 12.dp)
+                        .padding(top = 4.dp)
                 )
             }
             BoxWithConstraints(

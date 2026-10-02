@@ -24,7 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.presentation.components.primitives.StyledList
-import me.kavishdevar.librepods.presentation.components.primitives.StyledToggle
+import me.kavishdevar.librepods.presentation.components.primitives.styledToggle
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 @Composable
@@ -53,20 +53,20 @@ fun ConnectionSettings(
     isPremium: Boolean
 ) {
     StyledList {
-        StyledToggle(
+        styledToggle(
             label = stringResource(R.string.ear_detection),
             checked = automaticEarDetectionEnabled,
             onCheckedChange = onAutomaticEarDetectionChanged
         )
 
-        StyledToggle(
+        styledToggle(
             label = stringResource(R.string.automatically_connect),
             description = stringResource(R.string.automatically_connect_description),
             checked = automaticConnectionEnabled,
             onCheckedChange = onAutomaticConnectionChanged
         )
 
-        StyledToggle(
+        styledToggle(
             label = stringResource(R.string.disconnect_when_not_wearing),
             description = stringResource(R.string.disconnect_when_not_wearing_description),
             checked = disconnectWhenNotWearing,

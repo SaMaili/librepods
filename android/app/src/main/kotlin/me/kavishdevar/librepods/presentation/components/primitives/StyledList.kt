@@ -25,10 +25,10 @@ import androidx.compose.ui.tooling.preview.AndroidUiModes.UI_MODE_NIGHT_YES
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.Wallpapers.GREEN_DOMINATED_EXAMPLE
 import androidx.compose.ui.unit.dp
-import me.kavishdevar.librepods.presentation.theme.DesignSystem
-import me.kavishdevar.librepods.presentation.theme.LibrePodsTheme
-import me.kavishdevar.librepods.presentation.theme.LocalDesignSystem
-import me.kavishdevar.librepods.presentation.theme.sectionHeader
+import me.kavishdevar.librepods.presentation.design.DesignSystem
+import me.kavishdevar.librepods.presentation.design.LibrePodsTheme
+import me.kavishdevar.librepods.presentation.design.LocalDesignSystem
+import me.kavishdevar.librepods.presentation.design.sectionHeader
 
 @Composable
 fun StyledList(
@@ -53,7 +53,7 @@ fun StyledList(
 
     val m3eEnabled = LocalDesignSystem.current == DesignSystem.Material
 
-    Column (modifier = modifier) {
+    Column(modifier = modifier) {
         title?.let {
             Box(
                 modifier = Modifier
@@ -64,7 +64,7 @@ fun StyledList(
                 Text(
                     text = it,
                     color = if (m3eEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.sectionHeader,
-                    style = MaterialTheme.typography.labelSmallEmphasized
+                    style = MaterialTheme.typography.labelMediumEmphasized
                 )
             }
         }
@@ -133,13 +133,13 @@ fun StyledListDemo() {
                     title = "hello"
                 ) {
                     for (i in 0..2) {
-                        StyledListItem(
+                        styledListItem(
                             contentText = i.toString(),
                             onClick = {}
                         )
                     }
                     val checked = remember { mutableStateOf(false) }
-                    StyledToggle(
+                    styledToggle(
                         label = "Test",
                         description = "Lorem ipsum dolor sit amet, consectetur adipiscing elit mollit anim id est laborum.",
                         checked = checked.value,

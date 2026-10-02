@@ -79,10 +79,10 @@ import kotlinx.coroutines.flow.debounce
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.presentation.components.primitives.StyledButton
 import me.kavishdevar.librepods.presentation.components.primitives.StyledList
-import me.kavishdevar.librepods.presentation.components.primitives.StyledListItem
+import me.kavishdevar.librepods.presentation.components.primitives.styledListItem
 import me.kavishdevar.librepods.presentation.components.primitives.StyledScaffold
-import me.kavishdevar.librepods.presentation.theme.DesignSystem
-import me.kavishdevar.librepods.presentation.theme.LibrePodsTheme
+import me.kavishdevar.librepods.presentation.design.DesignSystem
+import me.kavishdevar.librepods.presentation.design.LibrePodsTheme
 import me.kavishdevar.librepods.presentation.viewmodel.AppleUiState
 import me.kavishdevar.librepods.presentation.viewmodel.AppleViewModel
 import kotlin.math.abs
@@ -163,13 +163,13 @@ fun EqualizerScreen(
             val enabled = customEq.isEnabled()
 
             StyledList {
-                StyledListItem(
+                styledListItem(
                     contentText = stringResource(R.string.recommended),
                     selected = !enabled,
                     onClick = { setCustomEqEnabled(false) }
                 )
 
-                StyledListItem(
+                styledListItem(
                     contentText = stringResource(R.string.custom),
                     selected = enabled,
                     onClick = { setCustomEqEnabled(true) }

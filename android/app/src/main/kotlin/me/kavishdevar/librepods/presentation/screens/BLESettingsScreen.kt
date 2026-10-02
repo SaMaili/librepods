@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.debounce
 import me.kavishdevar.librepods.R
 import me.kavishdevar.librepods.presentation.components.primitives.StyledList
-import me.kavishdevar.librepods.presentation.components.primitives.StyledListItem
+import me.kavishdevar.librepods.presentation.components.primitives.styledListItem
 import me.kavishdevar.librepods.presentation.components.primitives.StyledListItemOrientation
 import me.kavishdevar.librepods.presentation.components.primitives.StyledScaffold
 import me.kavishdevar.librepods.presentation.components.primitives.StyledSlider
@@ -82,21 +82,21 @@ fun BLESettingsScreen(
             )
 
             StyledList(title = stringResource(R.string.scanMode)) {
-                StyledListItem(
+                styledListItem(
                     onClick = { onScanModeChanged(0) },
                     contentText = stringResource(R.string.low_power),
                     supportingText = stringResource(R.string.ble_scan_mode_low_power_description),
                     orientation = StyledListItemOrientation.Vertical,
                     selected = scanMode == 0
                 )
-                StyledListItem(
+                styledListItem(
                     onClick = { onScanModeChanged(1) },
                     contentText = stringResource(R.string.balanced),
                     supportingText = stringResource(R.string.ble_scan_mode_balanced_description),
                     orientation = StyledListItemOrientation.Vertical,
                     selected = scanMode == 1
                 )
-                StyledListItem(
+                styledListItem(
                     onClick = { onScanModeChanged(2) },
                     contentText = stringResource(R.string.low_latency),
                     supportingText = stringResource(R.string.ble_scan_mode_low_latency_description),
