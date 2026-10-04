@@ -19,6 +19,9 @@ pub struct MyTray {
     pub battery_r_status: Option<BatteryStatus>,
     pub battery_c: Option<u8>,
     pub battery_c_status: Option<BatteryStatus>,
+    pub active_airpods: Option<String>,
+    pub independent_cases: crate::bluetooth::case_battery::CaseReadings,
+    pub telemetry: crate::bluetooth::battery_telemetry::Telemetry,
     pub connected: bool,
     pub listening_mode: Option<u8>,
     pub allow_off_option: Option<u8>,
@@ -97,7 +100,40 @@ impl ksni::Tray for MyTray {
 
         let l = format_component("L", self.battery_l, self.battery_l_status);
         let r = format_component("R", self.battery_r, self.battery_r_status);
-        let c = format_component("C", self.battery_c, self.battery_c_status);
+        let independent = self
+            .independent_cases
+            .get(self.active_airpods.as_deref(), std::time::SystemTime::now());
+        let latest_case = self.active_airpods.as_ref().and_then(|device| {
+            self.telemetry
+                .snapshot(crate::bluetooth::battery_telemetry::now_ms())
+                .get(device)
+                .and_then(|parts| parts.get("case"))
+                .copied()
+        });
+        let (case_level, case_status) = if let Some(sample) = latest_case {
+            (
+                Some(sample.percentage),
+                Some(if sample.charging {
+                    BatteryStatus::Charging
+                } else {
+                    BatteryStatus::NotCharging
+                }),
+            )
+        } else {
+            independent
+                .map(|v| {
+                    (
+                        v.percent,
+                        Some(if v.charging {
+                            BatteryStatus::Charging
+                        } else {
+                            BatteryStatus::NotCharging
+                        }),
+                    )
+                })
+                .unwrap_or((self.battery_c, self.battery_c_status))
+        };
+        let c = format_component("C", case_level, case_status);
 
         ToolTip {
             icon_name: "".to_string(),
@@ -297,5 +333,91 @@ fn generate_icon(text: &str, text_mode: bool, charging: bool) -> Icon {
         width: width as i32,
         height: height as i32,
         data,
+    }
+}
+
+#[cfg(test)]
+mod case_integration_tests {
+    use super::*;
+    use crate::bluetooth::case_battery::{CaseBattery, MAX_AGE};
+    use ksni::Tray;
+    fn tray() -> MyTray {
+        MyTray {
+            conversation_detect_enabled: None,
+            battery_headphone: None,
+            battery_headphone_status: None,
+            battery_l: Some(91),
+            battery_l_status: Some(BatteryStatus::NotCharging),
+            battery_r: Some(81),
+            battery_r_status: Some(BatteryStatus::NotCharging),
+            battery_c: None,
+            battery_c_status: Some(BatteryStatus::Disconnected),
+            active_airpods: Some("pair-A".into()),
+            independent_cases: Default::default(),
+            telemetry: Default::default(),
+            connected: true,
+            listening_mode: None,
+            allow_off_option: None,
+            command_tx: None,
+            ui_tx: None,
+        }
+    }
+    #[test]
+    fn independent_case_survives_missing_earbud_case_and_leaves_buds_unchanged() {
+        let mut t = tray();
+        t.independent_cases.update(
+            "pair-A",
+            CaseBattery {
+                percent: Some(76),
+                charging: true,
+            },
+            std::time::SystemTime::now(),
+        );
+        assert_eq!(t.tool_tip().description, "L: 91% R: 81% C: 76%⚡");
+        t.battery_c = None;
+        t.battery_c_status = Some(BatteryStatus::Disconnected);
+        assert_eq!(t.tool_tip().description, "L: 91% R: 81% C: 76%⚡");
+        t.active_airpods = Some("pair-B".into());
+        assert_eq!(t.tool_tip().description, "L: 91% R: 81% C: -");
+    }
+    #[test]
+    fn expired_case_exposes_unknown_for_widget_cache() {
+        let mut t = tray();
+        t.independent_cases.update(
+            "pair-A",
+            CaseBattery {
+                percent: Some(76),
+                charging: true,
+            },
+            std::time::SystemTime::now() - MAX_AGE,
+        );
+        assert_eq!(t.tool_tip().description, "L: 91% R: 81% C: -");
+    }
+    #[test]
+    fn newer_aacp_case_reading_replaces_older_independent_charging_state() {
+        let mut t = tray();
+        let now = crate::bluetooth::battery_telemetry::now_ms();
+        t.independent_cases.update(
+            "pair-A",
+            CaseBattery {
+                percent: Some(76),
+                charging: true,
+            },
+            std::time::SystemTime::now(),
+        );
+        t.telemetry
+            .update("pair-A", "case", "case", 128 + 76, now - 1000);
+        t.telemetry.update("pair-A", "aacp", "case", 77, now);
+        assert_eq!(t.tool_tip().description, "L: 91% R: 81% C: 77%");
+    }
+
+    #[test]
+    fn unknown_aacp_case_does_not_hide_a_fresh_independent_reading() {
+        let mut t = tray();
+        let now = crate::bluetooth::battery_telemetry::now_ms();
+        t.telemetry
+            .update("pair-A", "case", "case", 128 + 76, now - 1000);
+        t.telemetry.update("pair-A", "aacp", "case", 255, now);
+        assert_eq!(t.tool_tip().description, "L: 91% R: 81% C: 76%⚡");
     }
 }

@@ -3,6 +3,7 @@ use crate::bluetooth::aacp::{AACPEvent, AACPManager, AirPodsLEKeys, ProximityKey
 use crate::media_controller::MediaController;
 use crate::ui::messages::BluetoothUIMessage;
 use crate::ui::tray::MyTray;
+use crate::utils::get_app_settings_path;
 use bluer::Address;
 use ksni::Handle;
 use log::{debug, error, info};
@@ -10,7 +11,6 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::time::{Duration, sleep};
-use crate::utils::get_app_settings_path;
 
 pub struct AirPodsDevice {
     pub mac_address: Address,
@@ -28,6 +28,10 @@ impl AirPodsDevice {
     ) -> Self {
         info!("Creating new AirPodsDevice for {}", mac_address);
         let mut aacp_manager = AACPManager::new();
+        // Queue replies before connecting or requesting notifications. The
+        // listener starts below after the media controller is ready.
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        aacp_manager.set_event_channel(tx).await;
         aacp_manager.connect(mac_address).await;
 
         // let mut att_manager = ATTManager::new();
@@ -36,6 +40,7 @@ impl AirPodsDevice {
         if let Some(handle) = &tray_handle {
             handle
                 .update(|tray: &mut MyTray| {
+                    tray.active_airpods = Some(mac_address.to_string());
                     tray.connected = true;
                     tray.battery_headphone = None;
                     tray.battery_headphone_status = None;
@@ -123,10 +128,8 @@ impl AirPodsDevice {
             local_mac.clone(),
         )));
         let mc_clone = media_controller.clone();
-        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
         let (command_tx, mut command_rx) = tokio::sync::mpsc::unbounded_channel();
 
-        aacp_manager.set_event_channel(tx).await;
         if let Some(handle) = &tray_handle {
             handle
                 .update(|tray: &mut MyTray| tray.command_tx = Some(command_tx.clone()))
@@ -254,7 +257,14 @@ impl AirPodsDevice {
                         if let Some(handle) = &tray_handle {
                             handle
                                 .update(|tray: &mut MyTray| {
+                                    let now = crate::bluetooth::battery_telemetry::now_ms();
                                     for b in &battery_info {
+                                        let component = match b.component as u8 { 2 => Some("right"), 4 => Some("left"), 8 => Some("case"), _ => None };
+                                        if let Some(name) = component {
+                                            let byte = if b.status == crate::bluetooth::aacp::BatteryStatus::Disconnected || b.level > 100 { 255 }
+                                                else { b.level | if b.status == crate::bluetooth::aacp::BatteryStatus::Charging { 128 } else { 0 } };
+                                            tray.telemetry.update(&mac_address.to_string(), "aacp", name, byte, now);
+                                        }
                                         match b.component as u8 {
                                             0x01 => {
                                                 tray.battery_headphone = Some(b.level);
@@ -275,6 +285,7 @@ impl AirPodsDevice {
                                             _ => {}
                                         }
                                     }
+                                    let _ = tray.telemetry.publish(now);
                                 })
                                 .await;
                         }
@@ -352,10 +363,7 @@ impl AirPodsDevice {
                     }
                     AACPEvent::StemPress(press_type, bud_type) => {
                         use crate::bluetooth::aacp::StemPressType;
-                        info!(
-                            "Received Stem Press: {:?} on {:?}",
-                            press_type, bud_type
-                        );
+                        info!("Received Stem Press: {:?} on {:?}", press_type, bud_type);
                         if stem_control {
                             let controller = mc_clone.lock().await;
                             match press_type {

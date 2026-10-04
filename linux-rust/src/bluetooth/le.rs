@@ -1,4 +1,5 @@
 use crate::bluetooth::aacp::BatteryStatus;
+use crate::bluetooth::case_battery;
 use crate::devices::enums::{DeviceData, DeviceInformation, DeviceType};
 use crate::ui::tray::MyTray;
 use crate::utils::{ah, get_devices_path, get_preferences_path};
@@ -51,13 +52,13 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
     let adapter = session.default_adapter().await?;
     adapter.set_powered(true).await?;
 
-    let all_devices: HashMap<String, DeviceData> = std::fs::read_to_string(get_devices_path())
+    let mut all_devices: HashMap<String, DeviceData> = std::fs::read_to_string(get_devices_path())
         .ok()
         .and_then(|s| serde_json::from_str(&s).ok())
         .unwrap_or_default();
 
     let mut verified_macs: HashMap<Address, String> = HashMap::new();
-    let mut failed_macs: HashSet<Address> = HashSet::new();
+    let mut watchers: HashMap<Address, tokio::task::JoinHandle<()>> = HashMap::new();
     let connecting_macs = Arc::new(Mutex::new(HashSet::<Address>::new()));
 
     let pattern = Pattern {
@@ -82,20 +83,147 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
 
     debug!("Started LE monitor");
 
-    while let Some(mevt) = monitor_handle.next().await {
-        if let MonitorEvent::DeviceFound(devid) = mevt {
+    // Trigger a tray change on expiry so consumers can use their last-known cache.
+    if let Some(handle) = tray_handle.clone() {
+        tokio::spawn(async move {
+            let mut timer = tokio::time::interval(std::time::Duration::from_secs(5));
+            loop {
+                timer.tick().await;
+                handle
+                    .update(|tray: &mut MyTray| {
+                        tray.independent_cases.expire(std::time::SystemTime::now());
+                        if let Err(e) = tray
+                            .telemetry
+                            .publish(crate::bluetooth::battery_telemetry::now_ms())
+                        {
+                            log::warn!("Battery telemetry write failed: {}", e);
+                        }
+                    })
+                    .await;
+            }
+        });
+    }
+    // BlueZ can retain advertisers across a LibrePods restart without sending
+    // DeviceFound again. Subscribe to future changes on these objects as well,
+    // but never count their cached ManufacturerData as a fresh observation.
+    let mut existing_advertisers = Vec::new();
+    for addr in adapter.device_addresses().await? {
+        if let Ok(device) = adapter.device(addr) {
+            if let Ok(Some(data)) = device.manufacturer_data().await {
+                if data.contains_key(&76) {
+                    existing_advertisers.push(addr);
+                }
+            }
+        }
+    }
+    let bootstrap_scan = all_devices.values().any(|device| {
+        matches!(&device.information, Some(DeviceInformation::AirPods(info))
+            if hex::decode(&info.le_keys.enc_key).is_ok_and(|key| key.len() == 16))
+    });
+    // BlueZ normally suppresses repeated identical ManufacturerData, so a
+    // full bud in a closed case otherwise ages out despite continued adverts.
+    // Request duplicates briefly only for a recently seen independent case.
+    if let Some(handle) = tray_handle.clone() {
+        let refresh_adapter = adapter.clone();
+        tokio::spawn(async move {
+            let filter = bluer::DiscoveryFilter {
+                transport: bluer::DiscoveryTransport::Le,
+                duplicate_data: true,
+                ..Default::default()
+            };
+            if let Err(e) = refresh_adapter.set_discovery_filter(filter).await {
+                log::warn!("Case refresh filter unavailable: {}", e);
+                return;
+            }
+            let mut timer = tokio::time::interval(std::time::Duration::from_secs(30));
+            timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            let mut bootstrap = bootstrap_scan;
+            loop {
+                timer.tick().await;
+                let Some(needed) = handle
+                    .update(|tray: &mut MyTray| {
+                        tray.telemetry
+                            .needs_case_refresh(crate::bluetooth::battery_telemetry::now_ms())
+                    })
+                    .await
+                else {
+                    break;
+                };
+                // A bounded startup window obtains real samples from already
+                // present cases; routine refreshes remain short and conditional.
+                if !needed && !bootstrap {
+                    continue;
+                }
+                let scan_seconds = if bootstrap { 20 } else { 8 };
+                bootstrap = false;
+                match refresh_adapter.discover_devices().await {
+                    Ok(events) => {
+                        info!(
+                            "Refreshing case advertisements ({}-second LE scan)",
+                            scan_seconds
+                        );
+                        futures::pin_mut!(events);
+                        let _ = tokio::time::timeout(
+                            std::time::Duration::from_secs(scan_seconds),
+                            async { while events.next().await.is_some() {} },
+                        )
+                        .await;
+                        // Dropping our discovery stream releases only our scan request.
+                    }
+                    Err(e) => log::warn!("Case refresh scan unavailable: {}", e),
+                }
+            }
+        });
+    }
+    loop {
+        let (device_address, newly_found) = if let Some(addr) = existing_advertisers.pop() {
+            (addr, false)
+        } else {
+            match monitor_handle.next().await {
+                Some(MonitorEvent::DeviceFound(devid)) => (devid.device, true),
+                Some(MonitorEvent::DeviceLost(_)) => {
+                    // Monitor loss is not D-Bus object removal. Discovery can
+                    // still deliver fresh properties on this existing object.
+                    watchers.retain(|_, task| !task.is_finished());
+                    continue;
+                }
+                Some(_) => continue,
+                None => break,
+            }
+        };
+        {
+            // Keys may arrive after the monitor starts or after a reconnect.
+            if let Ok(contents) = std::fs::read_to_string(get_devices_path()) {
+                if let Ok(devices) = serde_json::from_str(&contents) {
+                    all_devices = devices;
+                }
+            }
             let adapter_monitor_clone = adapter.clone();
-            let dev = adapter_monitor_clone.device(devid.device)?;
+            let dev = adapter_monitor_clone.device(device_address)?;
             let addr = dev.address();
             let addr_str = addr.to_string();
+            if watchers.get(&addr).is_some_and(|task| !task.is_finished()) {
+                continue;
+            }
+            let case_keys: Vec<(String, [u8; 16])> = all_devices
+                .iter()
+                .filter_map(|(mac, device)| {
+                    if device.type_ != DeviceType::AirPods {
+                        return None;
+                    }
+                    let Some(DeviceInformation::AirPods(info)) = &device.information else {
+                        return None;
+                    };
+                    let key = hex::decode(&info.le_keys.enc_key).ok()?;
+                    Some((mac.clone(), key.as_slice().try_into().ok()?))
+                })
+                .collect();
 
             let matched_airpods_mac: Option<String>;
             let mut matched_enc_key: Option<[u8; 16]> = None;
 
             if let Some(airpods_mac) = verified_macs.get(&addr) {
                 matched_airpods_mac = Some(airpods_mac.clone());
-            } else if failed_macs.contains(&addr) {
-                continue;
             } else {
                 debug!("Checking RPA for device: {}", addr_str);
                 let mut found_mac = None;
@@ -106,10 +234,7 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                         && irk_bytes.len() == 16
                     {
                         let irk: [u8; 16] = irk_bytes.as_slice().try_into().unwrap();
-                        debug!(
-                            "Verifying RPA {} for airpods MAC {} with IRK {}",
-                            addr_str, airpods_mac, info.le_keys.irk
-                        );
+                        debug!("Checking stored AirPods IRK");
                         if verify_rpa(&addr_str, &irk) {
                             info!(
                                 "Matched our device ({}) with the irk for {}",
@@ -125,9 +250,9 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                 if let Some(mac) = found_mac {
                     matched_airpods_mac = Some(mac);
                 } else {
-                    failed_macs.insert(addr);
                     debug!("Device {} did not match any of our irks", addr);
-                    continue;
+                    // The case has its own RPA; it need not match the earbud IRK.
+                    matched_airpods_mac = None;
                 }
             }
 
@@ -140,18 +265,75 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                 matched_enc_key = Some(enc_key_bytes.as_slice().try_into().unwrap());
             }
 
-            if matched_airpods_mac.is_some() {
-                let mut events = dev.events().await?;
+            if matched_airpods_mac.is_some() || !case_keys.is_empty() {
+                let live_events = dev.events().await?;
+                // DeviceFound can arrive after ManufacturerData was set. Process
+                // that first advertisement as well as subsequent changes.
+                let initial_data = if newly_found {
+                    dev.manufacturer_data().await?
+                } else {
+                    None
+                };
+                let initial_events = initial_data.into_iter().map(|data| {
+                    bluer::DeviceEvent::PropertyChanged(bluer::DeviceProperty::ManufacturerData(
+                        data,
+                    ))
+                });
+                let mut events = futures::stream::iter(initial_events).chain(live_events);
                 let tray_handle_clone = tray_handle.clone();
                 let connecting_macs_clone = Arc::clone(&connecting_macs);
-                tokio::spawn(async move {
+                let task = tokio::spawn(async move {
+                    let mut last_battery = None;
+                    let mut last_case = None;
                     while let Some(ev) = events.next().await {
                         match ev {
                             bluer::DeviceEvent::PropertyChanged(prop) => {
                                 if let bluer::DeviceProperty::ManufacturerData(data) = prop {
+                                    if let Some(apple_data) = data.get(&76)
+                                        && let Some((pair, components)) =
+                                            case_battery::match_components(apple_data, &case_keys)
+                                    {
+                                        let value = case_battery::CaseBattery {
+                                            percent: (components[2] != 255)
+                                                .then_some(components[2] & 127),
+                                            charging: components[2] != 255
+                                                && components[2] & 128 != 0,
+                                        };
+                                        if last_case != Some(value) {
+                                            info!(
+                                                "Independent case battery: {:?}% (charging: {})",
+                                                value.percent, value.charging
+                                            );
+                                            last_case = Some(value);
+                                        }
+                                        if let Some(handle) = &tray_handle_clone {
+                                            handle
+                                                .update(|tray: &mut MyTray| {
+                                                    tray.independent_cases.update(
+                                                        pair,
+                                                        value,
+                                                        std::time::SystemTime::now(),
+                                                    );
+                                                    let now =
+                                                        crate::bluetooth::battery_telemetry::now_ms(
+                                                        );
+                                                    for (name, byte) in ["left", "right", "case"]
+                                                        .into_iter()
+                                                        .zip(components)
+                                                    {
+                                                        tray.telemetry
+                                                            .update(pair, "case", name, byte, now);
+                                                    }
+                                                    let _ = tray.telemetry.publish(now);
+                                                })
+                                                .await;
+                                        }
+                                        continue;
+                                    }
                                     if let Some(enc_key) = &matched_enc_key
                                         && let Some(apple_data) = data.get(&76)
-                                        && apple_data.len() > 20
+                                        && apple_data.len() == 27
+                                        && apple_data[..3] == [0x07, 0x19, 0x01]
                                     {
                                         let last_16: [u8; 16] =
                                             apple_data[apple_data.len() - 16..].try_into().unwrap();
@@ -293,9 +475,53 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                                             (case_byte & 0x7F, (case_byte & 0x80) != 0)
                                         };
 
+                                        let battery_bytes = (left_byte, right_byte, case_byte);
+                                        if last_battery != Some(battery_bytes) {
+                                            info!(
+                                                "BLE battery update: case={}",
+                                                if case_byte == 0xff {
+                                                    "disconnected".to_string()
+                                                } else {
+                                                    format!(
+                                                        "{}% (charging: {})",
+                                                        case_battery, case_charging
+                                                    )
+                                                }
+                                            );
+                                            last_battery = Some(battery_bytes);
+                                        }
+
                                         if let Some(handle) = &tray_handle_clone {
                                             handle
                                                 .update(|tray: &mut MyTray| {
+                                                    let now =
+                                                        crate::bluetooth::battery_telemetry::now_ms(
+                                                        );
+                                                    if let Some(pair) =
+                                                        matched_airpods_mac.as_deref()
+                                                    {
+                                                        for (name, byte) in
+                                                            ["left", "right", "case"]
+                                                                .into_iter()
+                                                                .zip([
+                                                                    left_byte, right_byte,
+                                                                    case_byte,
+                                                                ])
+                                                        {
+                                                            tray.telemetry.update(
+                                                                pair, "earbuds", name, byte as u8,
+                                                                now,
+                                                            );
+                                                        }
+                                                        let _ = tray.telemetry.publish(now);
+                                                    }
+                                                    if tray.active_airpods.is_none() {
+                                                        tray.active_airpods =
+                                                            matched_airpods_mac.clone();
+                                                    }
+                                                    if tray.active_airpods != matched_airpods_mac {
+                                                        return;
+                                                    }
                                                     tray.battery_l = if left_byte == 0xff {
                                                         None
                                                     } else {
@@ -371,8 +597,12 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                         }
                     }
                 });
+                watchers.insert(addr, task);
             }
         }
+    }
+    for (_, task) in watchers {
+        task.abort();
     }
 
     Ok(())
