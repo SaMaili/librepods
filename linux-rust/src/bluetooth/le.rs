@@ -91,7 +91,6 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                 timer.tick().await;
                 handle
                     .update(|tray: &mut MyTray| {
-                        tray.independent_cases.expire(std::time::SystemTime::now());
                         if let Err(e) = tray
                             .telemetry
                             .publish(crate::bluetooth::battery_telemetry::now_ms())
@@ -149,8 +148,6 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                 else {
                     break;
                 };
-                // A bounded startup window obtains real samples from already
-                // present cases; routine refreshes remain short and conditional.
                 if !needed && !bootstrap {
                     continue;
                 }
@@ -267,8 +264,7 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
 
             if matched_airpods_mac.is_some() || !case_keys.is_empty() {
                 let live_events = dev.events().await?;
-                // DeviceFound can arrive after ManufacturerData was set. Process
-                // that first advertisement as well as subsequent changes.
+                // Only new sightings may use the initial ManufacturerData as a fresh sample.
                 let initial_data = if newly_found {
                     dev.manufacturer_data().await?
                 } else {
@@ -293,27 +289,14 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                                         && let Some((pair, components)) =
                                             case_battery::match_components(apple_data, &case_keys)
                                     {
-                                        let value = case_battery::CaseBattery {
-                                            percent: (components[2] != 255)
-                                                .then_some(components[2] & 127),
-                                            charging: components[2] != 255
-                                                && components[2] & 128 != 0,
-                                        };
+                                        let value = components[2];
                                         if last_case != Some(value) {
-                                            info!(
-                                                "Independent case battery: {:?}% (charging: {})",
-                                                value.percent, value.charging
-                                            );
+                                            info!("Independent case battery byte: {value:#04x}");
                                             last_case = Some(value);
                                         }
                                         if let Some(handle) = &tray_handle_clone {
                                             handle
                                                 .update(|tray: &mut MyTray| {
-                                                    tray.independent_cases.update(
-                                                        pair,
-                                                        value,
-                                                        std::time::SystemTime::now(),
-                                                    );
                                                     let now =
                                                         crate::bluetooth::battery_telemetry::now_ms(
                                                         );
@@ -379,18 +362,10 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                                                     return;
                                                 }
                                                 cm.insert(real_address);
-                                                // let adapter_clone = adapter_monitor_clone.clone();
-                                                // let real_device = adapter_clone.device(real_address).unwrap();
                                                 info!(
                                                     "AirPods are disconnected, attempting to connect to {}",
                                                     matched_airpods_mac.as_ref().unwrap()
                                                 );
-                                                // if let Err(e) = real_device.connect().await {
-                                                //     info!("Failed to connect to AirPods {}: {}", matched_airpods_mac.as_ref().unwrap(), e);
-                                                // } else {
-                                                //     info!("Successfully connected to AirPods {}", matched_airpods_mac.as_ref().unwrap());
-                                                // }
-                                                // call bluetoothctl connect <mac> for now, I don't know why bluer connect isn't working
                                                 let output =
                                                     tokio::process::Command::new("bluetoothctl")
                                                         .arg("connect")

@@ -51,18 +51,24 @@ impl Telemetry {
             );
         }
     }
+    pub fn component(&self, device: &str, component: &str, now: u64) -> Option<Sample> {
+        self.data
+            .get(device)?
+            .get(component)?
+            .values()
+            .filter(|sample| sample.observed_at <= now && now - sample.observed_at < FRESH_MS)
+            .max_by_key(|sample| sample.observed_at)
+            .copied()
+    }
     pub fn snapshot(&self, now: u64) -> BTreeMap<String, BTreeMap<String, Sample>> {
         self.data
             .iter()
             .filter_map(|(device, parts)| {
                 let values: BTreeMap<_, _> = parts
                     .iter()
-                    .filter_map(|(part, sources)| {
-                        sources
-                            .values()
-                            .filter(|s| s.observed_at <= now && now - s.observed_at < FRESH_MS)
-                            .max_by_key(|s| s.observed_at)
-                            .map(|s| (part.clone(), *s))
+                    .filter_map(|(part, _)| {
+                        self.component(device, part, now)
+                            .map(|sample| (part.clone(), sample))
                     })
                     .collect();
                 (!values.is_empty()).then_some((device.clone(), values))

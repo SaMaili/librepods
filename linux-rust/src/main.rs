@@ -59,10 +59,6 @@ fn main() -> iced::Result {
     }
 
     let log_level = if args.debug { "debug" } else { "info" };
-    // let wayland_display = env::var("WAYLAND_DISPLAY").is_ok();
-    // if wayland_display && env::var("WGPU_BACKEND").is_err() {
-    //     unsafe { env::set_var("WGPU_BACKEND", "gl") };
-    // }
     if env::var("RUST_LOG").is_err() {
         unsafe {
             env::set_var(
@@ -140,7 +136,6 @@ async fn async_main(
             battery_c: None,
             battery_c_status: None,
             active_airpods: None,
-            independent_cases: Default::default(),
             telemetry: Default::default(),
             connected: false,
             listening_mode: None,
@@ -178,7 +173,6 @@ async fn async_main(
                 AirPodsDevice::new(device.address(), tray_handle.clone(), ui_tx.clone()).await;
 
             let mut managers = device_managers.write().await;
-            // let dev_managers = DeviceManagers::with_both(airpods_device.aacp_manager.clone(), airpods_device.att_manager.clone());
             let dev_managers = DeviceManagers::with_aacp(airpods_device.aacp_manager.clone());
             managers
                 .entry(device.address().to_string())
@@ -249,7 +243,6 @@ async fn async_main(
         if !path.contains("/org/bluez/hci") || !path.contains("/dev_") {
             return true;
         }
-        // debug!("PropertiesChanged signal for path: {}", path);
         let Ok((iface, changed, _)) =
             msg.read3::<String, HashMap<String, Variant<Box<dyn RefArg>>>, Vec<String>>()
         else {
@@ -318,7 +311,6 @@ async fn async_main(
         tokio::spawn(async move {
             let airpods_device = AirPodsDevice::new(addr, handle_clone, ui_tx_clone.clone()).await;
             let mut managers = device_managers.write().await;
-            // let dev_managers = DeviceManagers::with_both(airpods_device.aacp_manager.clone(), airpods_device.att_manager.clone());
             let dev_managers = DeviceManagers::with_aacp(airpods_device.aacp_manager.clone());
             managers
                 .entry(addr_str.clone())

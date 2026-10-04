@@ -15,9 +15,7 @@ use tokio::time::{Duration, sleep};
 pub struct AirPodsDevice {
     pub mac_address: Address,
     pub aacp_manager: AACPManager,
-    // pub att_manager: ATTManager,
     pub media_controller: Arc<Mutex<MediaController>>,
-    // pub command_tx: Option<tokio::sync::mpsc::UnboundedSender<(ControlCommandIdentifiers, Vec<u8>)>>,
 }
 
 impl AirPodsDevice {
@@ -28,14 +26,10 @@ impl AirPodsDevice {
     ) -> Self {
         info!("Creating new AirPodsDevice for {}", mac_address);
         let mut aacp_manager = AACPManager::new();
-        // Queue replies before connecting or requesting notifications. The
-        // listener starts below after the media controller is ready.
+        // Subscribe before connecting so initial battery replies are queued.
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
         aacp_manager.set_event_channel(tx).await;
         aacp_manager.connect(mac_address).await;
-
-        // let mut att_manager = ATTManager::new();
-        // att_manager.connect(mac_address).await.expect("Failed to connect ATT");
 
         if let Some(handle) = &tray_handle {
             handle
@@ -398,9 +392,7 @@ impl AirPodsDevice {
         AirPodsDevice {
             mac_address,
             aacp_manager,
-            // att_manager,
             media_controller,
-            // command_tx: Some(command_tx.clone()),
         }
     }
 }
