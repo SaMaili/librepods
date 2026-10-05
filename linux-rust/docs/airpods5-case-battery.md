@@ -35,12 +35,14 @@ charging icon is drawn geometry. Information refreshes preserve proximity keys,
 and the AACP subscription is installed before connection setup.
 
 Existing advertisers are subscribed after startup without promoting cached bytes
-to fresh readings. Monitor loss alone does not remove a D-Bus subscription.
+to fresh readings. Adapter device-added events also establish subscriptions when
+BlueZ discovery creates an advertiser without a monitor DeviceFound. Device
+removal clears its watcher; monitor loss alone does not remove a subscription.
 Because BlueZ suppresses identical ManufacturerData, duplicate-report LE scans run
 for eight seconds when a previously seen case is silent for at least 60 seconds.
 A 30-second scheduler stops requesting refreshes after ten minutes without a case
-sample. One 20-second startup window runs when stored keys exist. Live independent
-case recovery after a process restart remains unverified.
+sample. One 20-second startup window runs when stored keys exist. Live recovery after a process restart was verified once while an empty, closed
+case was charging; ongoing advertiser discovery is covered by the adapter stream.
 
 ## Consumer interface
 
@@ -64,6 +66,14 @@ three-minute mixed-state run kept samples fresh with maximum age 88.9 seconds.
 
 Other empty-case states supplied no independent packet, including while charging
 and with iPhone Bluetooth disabled. The iPhone row also disappeared after removing
-the last earbud. The cause is unresolved. Only observed product `0x2035` is accepted;
+the last earbud. In a later closed, empty-case charging session, fresh independent
+packets reported 95% and charging, matching the iPhone. A passive observer received
+five fresh events in 45 seconds while the running service missed them; restarting
+the service recovered fresh telemetry without changing the case state. A separate
+35-second scan received nine case-format events. Empty-case transmission is
+therefore state-dependent; the cause of silent sessions remains unresolved.
+With adapter device-added subscriptions installed, a three-minute run received
+fresh 96% to 97% charging updates. Apart from one startup sample before reception,
+the exported case stayed present; maximum sample age was 65.7 seconds. Only observed product `0x2035` is accepted;
 a second pair, other models/firmware, and continuous empty-case transmission are
 not validated. Raw captures, real keys, addresses and serials are excluded.

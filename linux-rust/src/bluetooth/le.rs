@@ -7,7 +7,7 @@ use aes::Aes128;
 use aes::cipher::Array;
 use aes::cipher::{BlockCipherDecrypt, KeyInit};
 use bluer::monitor::{Monitor, MonitorEvent, Pattern};
-use bluer::{Address, Session};
+use bluer::{AdapterEvent, Address, Session};
 use futures::StreamExt;
 use hex;
 use log::{debug, info};
@@ -105,6 +105,7 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
     // BlueZ can retain advertisers across a LibrePods restart without sending
     // DeviceFound again. Subscribe to future changes on these objects as well,
     // but never count their cached ManufacturerData as a fresh observation.
+    let mut adapter_events = adapter.events().await?;
     let mut existing_advertisers = Vec::new();
     for addr in adapter.device_addresses().await? {
         if let Ok(device) = adapter.device(addr) {
@@ -176,16 +177,29 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
         let (device_address, newly_found) = if let Some(addr) = existing_advertisers.pop() {
             (addr, false)
         } else {
-            match monitor_handle.next().await {
-                Some(MonitorEvent::DeviceFound(devid)) => (devid.device, true),
-                Some(MonitorEvent::DeviceLost(_)) => {
-                    // Monitor loss is not D-Bus object removal. Discovery can
-                    // still deliver fresh properties on this existing object.
-                    watchers.retain(|_, task| !task.is_finished());
-                    continue;
-                }
-                Some(_) => continue,
-                None => break,
+            tokio::select! {
+                event = monitor_handle.next() => match event {
+                    Some(MonitorEvent::DeviceFound(devid)) => (devid.device, true),
+                    Some(MonitorEvent::DeviceLost(_)) => {
+                        watchers.retain(|_, task| !task.is_finished());
+                        continue;
+                    }
+                    Some(_) => continue,
+                    None => break,
+                },
+                event = adapter_events.next() => match event {
+                    // Discovery can add an advertiser without a monitor DeviceFound.
+                    Some(AdapterEvent::DeviceAdded(addr)) => (addr, true),
+                    Some(AdapterEvent::DeviceRemoved(addr)) => {
+                        if let Some(task) = watchers.remove(&addr) {
+                            task.abort();
+                        }
+                        verified_macs.remove(&addr);
+                        continue;
+                    }
+                    Some(_) => continue,
+                    None => break,
+                },
             }
         };
         {
