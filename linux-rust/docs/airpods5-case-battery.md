@@ -19,11 +19,13 @@ decoder requires exactly one structurally valid match among stored AirPods keys.
 | 4 | Left earbud battery |
 | 5 | Right earbud battery |
 | 6–7, 12–13 | Unknown |
-| 8–11, 14–15 | Zero in observed frames |
+| 8–11, 15 | Zero in observed frames |
+| 14 | Opaque field, observed as `0` and `1` |
 
 Battery bytes use bits 0–6 for percentage, bit 7 for charging, and `ff` for unknown.
-Known percentages must be 0–100. Model, length, header and reserved fields are
-validated. These checks are not cryptographic authentication and must not authorize
+Known percentages must be 0–100. Model, length, header, zero fields and the
+observed byte-14 values are validated. Byte 14 is not assumed to be reserved or
+a charging indicator; its meaning remains unknown. These checks are not cryptographic authentication and must not authorize
 control operations. Tests use synthetic keys and packets, not accessory secrets.
 
 ## Source selection and reception
@@ -77,3 +79,14 @@ fresh 96% to 97% charging updates. Apart from one startup sample before receptio
 the exported case stayed present; maximum sample age was 65.7 seconds. Only observed product `0x2035` is accepted;
 a second pair, other models/firmware, and continuous empty-case transmission are
 not validated. Raw captures, real keys, addresses and serials are excluded.
+
+On 2026-10-09, a right earbud charging in the case produced byte 14 = 1,
+while bytes 8–11 and 15 stayed zero. The old zero-only check discarded these
+packets. Independent decryption showed case 52% to 51% and right 30% to 35%
+with charging set, consistent with the user's iPhone observations. The decoder
+now accepts only observed byte-14 values 0 and 1; other format, percentage and
+unique-key checks remain unchanged. Regression fixtures use a synthetic key.
+After installation, a three-minute live test followed right 40% to 49% charging
+and case 49% to 48% not charging. No component disappeared after startup; right
+and case sample age stayed at or below 37.4 seconds. The user confirmed that
+the widget displayed the correct state.

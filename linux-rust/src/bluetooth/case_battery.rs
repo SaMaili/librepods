@@ -11,10 +11,11 @@ pub fn decode_components(data: &[u8], key: &[u8; 16]) -> Option<[u8; 3]> {
     }
     let mut block = Array::from(<[u8; 16]>::try_from(&data[3..]).ok()?);
     Aes128::new(&Array::from(*key)).decrypt_block(&mut block);
-    // Byte 2 is opaque; only the observed product and reserved fields are validated.
+    // Bytes 2 and 14 are opaque; byte 14 has been observed as 0 or 1.
     if block[..2] != [0x35, 0x20]
         || block[8..12] != [0; 4]
-        || block[14..16] != [0; 2]
+        || block[14] > 1
+        || block[15] != 0
         || block[3..6].iter().any(|v| *v != 0xff && v & 0x7f > 100)
     {
         return None;
@@ -88,6 +89,26 @@ mod tests {
         assert_eq!(decode_components(&packet(p), &KEY), Some([255, 198, 81]));
     }
     #[test]
+    fn observed_flag_one_preserves_charging_right_bud() {
+        let mut p = plain(51);
+        p[2] = 0x0b;
+        p[14] = 1;
+        for level in [30, 31, 32, 33, 40] {
+            p[5] = 128 + level;
+            assert_eq!(
+                decode_components(&packet(p), &KEY),
+                Some([255, 128 + level, 51])
+            );
+        }
+        p[5] = 40;
+        assert_eq!(decode_components(&packet(p), &KEY), Some([255, 40, 51]));
+        for flag in 2..=u8::MAX {
+            p[14] = flag;
+            assert!(decode_components(&packet(p), &KEY).is_none());
+        }
+    }
+
+    #[test]
     fn boundaries_unknown_and_invalid() {
         for level in [0, 100, 128, 228, 255] {
             assert!(decode_components(&packet(plain(level)), &KEY).is_some());
@@ -106,7 +127,7 @@ mod tests {
             (5, 254),
             (8, 1),
             (11, 1),
-            (14, 1),
+            (14, 2),
             (15, 1),
         ] {
             let mut p = plain(76);
