@@ -120,9 +120,8 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
         matches!(&device.information, Some(DeviceInformation::AirPods(info))
             if hex::decode(&info.le_keys.enc_key).is_ok_and(|key| key.len() == 16))
     });
-    // BlueZ normally suppresses repeated identical ManufacturerData, so a
-    // full bud in a closed case otherwise ages out despite continued adverts.
-    // Request duplicates briefly only for a recently seen independent case.
+    // BlueZ suppresses repeated identical ManufacturerData. Brief duplicate
+    // windows refresh stale components even if another component remains fresh.
     if let Some(handle) = tray_handle.clone() {
         let refresh_adapter = adapter.clone();
         tokio::spawn(async move {
@@ -132,7 +131,7 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                 ..Default::default()
             };
             if let Err(e) = refresh_adapter.set_discovery_filter(filter).await {
-                log::warn!("Case refresh filter unavailable: {}", e);
+                log::warn!("Battery refresh filter unavailable: {}", e);
                 return;
             }
             let mut timer = tokio::time::interval(std::time::Duration::from_secs(30));
@@ -143,7 +142,7 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                 let Some(needed) = handle
                     .update(|tray: &mut MyTray| {
                         tray.telemetry
-                            .needs_case_refresh(crate::bluetooth::battery_telemetry::now_ms())
+                            .needs_battery_refresh(crate::bluetooth::battery_telemetry::now_ms())
                     })
                     .await
                 else {
@@ -157,7 +156,7 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                 match refresh_adapter.discover_devices().await {
                     Ok(events) => {
                         info!(
-                            "Refreshing case advertisements ({}-second LE scan)",
+                            "Refreshing battery advertisements ({}-second LE scan)",
                             scan_seconds
                         );
                         futures::pin_mut!(events);
@@ -168,7 +167,7 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                         .await;
                         // Dropping our discovery stream releases only our scan request.
                     }
-                    Err(e) => log::warn!("Case refresh scan unavailable: {}", e),
+                    Err(e) => log::warn!("Battery refresh scan unavailable: {}", e),
                 }
             }
         });
@@ -365,62 +364,42 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                                                 auto_connect
                                             );
                                             if auto_connect {
-                                                let real_address =
-                                                    Address::from_str(&addr_str).unwrap();
-                                                let mut cm = connecting_macs_clone.lock().await;
-                                                if cm.contains(&real_address) {
-                                                    info!(
-                                                        "Already connecting to {}, skipping duplicate attempt.",
-                                                        matched_airpods_mac.as_ref().unwrap()
-                                                    );
-                                                    return;
-                                                }
-                                                cm.insert(real_address);
-                                                info!(
-                                                    "AirPods are disconnected, attempting to connect to {}",
-                                                    matched_airpods_mac.as_ref().unwrap()
-                                                );
-                                                let output =
-                                                    tokio::process::Command::new("bluetoothctl")
-                                                        .arg("connect")
-                                                        .arg(matched_airpods_mac.as_ref().unwrap())
-                                                        .output()
+                                                let pair_address = Address::from_str(
+                                                    matched_airpods_mac.as_ref().unwrap(),
+                                                )
+                                                .unwrap();
+                                                let mut connecting =
+                                                    connecting_macs_clone.lock().await;
+                                                if connecting.insert(pair_address) {
+                                                    let adapter = adapter_monitor_clone.clone();
+                                                    let connecting_macs =
+                                                        Arc::clone(&connecting_macs_clone);
+                                                    // Connection setup must not block battery reception.
+                                                    tokio::spawn(async move {
+                                                        let result = tokio::time::timeout(
+                                                            std::time::Duration::from_secs(20),
+                                                            async {
+                                                                adapter.device(pair_address)?
+                                                                    .connect()
+                                                                    .await
+                                                            },
+                                                        )
                                                         .await;
-                                                match output {
-                                                    Ok(output) => {
-                                                        if output.status.success() {
-                                                            info!(
-                                                                "Successfully connected to AirPods {}",
-                                                                matched_airpods_mac
-                                                                    .as_ref()
-                                                                    .unwrap()
-                                                            );
-                                                            cm.remove(&real_address);
-                                                        } else {
-                                                            let stderr = String::from_utf8_lossy(
-                                                                &output.stderr,
-                                                            );
-                                                            info!(
-                                                                "Failed to connect to AirPods {}: {}",
-                                                                matched_airpods_mac
-                                                                    .as_ref()
-                                                                    .unwrap(),
-                                                                stderr
-                                                            );
+                                                        match result {
+                                                            Ok(Ok(())) => info!(
+                                                                "AirPods auto-connect succeeded"
+                                                            ),
+                                                            Ok(Err(e)) => info!(
+                                                                "AirPods auto-connect failed: {}", e
+                                                            ),
+                                                            Err(_) => info!(
+                                                                "AirPods auto-connect timed out"
+                                                            ),
                                                         }
-                                                    }
-                                                    Err(e) => {
-                                                        info!(
-                                                            "Failed to execute bluetoothctl to connect to AirPods {}: {}",
-                                                            matched_airpods_mac.as_ref().unwrap(),
-                                                            e
-                                                        );
-                                                    }
+                                                        connecting_macs.lock().await
+                                                            .remove(&pair_address);
+                                                    });
                                                 }
-                                                info!(
-                                                    "Auto-connect is disabled for {}, not attempting to connect.",
-                                                    matched_airpods_mac.as_ref().unwrap()
-                                                );
                                             }
                                         }
 

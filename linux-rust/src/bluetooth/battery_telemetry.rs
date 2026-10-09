@@ -75,18 +75,17 @@ impl Telemetry {
             })
             .collect()
     }
-    pub fn needs_case_refresh(&self, now: u64) -> bool {
-        // Only after an independently advertising case has actually been seen.
-        // Stop extra scans when it has been absent for ten minutes.
+    pub fn needs_battery_refresh(&self, now: u64) -> bool {
+        // Refresh each previously seen component independently. A fresh case
+        // must not hide stale earbud samples; stop probing after ten minutes.
         self.data.values().any(|parts| {
-            let last = parts
-                .values()
-                .filter_map(|sources| sources.get("case"))
-                .map(|sample| sample.observed_at)
-                .max();
-            last.is_some_and(|at| now >= at && (60_000..600_000).contains(&(now - at)))
+            parts.values().any(|sources| {
+                let last = sources.values().map(|sample| sample.observed_at).max();
+                last.is_some_and(|at| now >= at && (60_000..600_000).contains(&(now - at)))
+            })
         })
     }
+
     pub fn publish(&mut self, now: u64) -> io::Result<()> {
         // At most one write per second even when many duplicate adverts arrive.
         if now >= self.last_write && now - self.last_write < 1000 {
@@ -139,16 +138,31 @@ mod tests {
         assert!(!s.contains_key("B"));
     }
     #[test]
-    fn refresh_only_for_recently_seen_case_with_silent_updates() {
+    fn refresh_only_for_recently_seen_components_with_silent_updates() {
         let mut t = Telemetry::default();
         t.update("A", "earbuds", "right", 90, 1000);
-        assert!(!t.needs_case_refresh(61000));
+        assert!(t.needs_battery_refresh(61000));
         t.update("A", "case", "left", 200, 1000);
-        assert!(!t.needs_case_refresh(60999));
-        assert!(t.needs_case_refresh(61000));
-        assert!(!t.needs_case_refresh(601000));
-        assert!(!t.needs_case_refresh(999));
+        assert!(!t.needs_battery_refresh(60999));
+        assert!(t.needs_battery_refresh(61000));
+        assert!(!t.needs_battery_refresh(601000));
+        assert!(!t.needs_battery_refresh(999));
     }
+    #[test]
+    fn fresh_case_does_not_suppress_stale_earbud_refresh() {
+        let mut t = Telemetry::default();
+        t.update("A", "earbuds", "left", 100, 1000);
+        t.update("A", "earbuds", "right", 100, 1000);
+        t.update("A", "case", "case", 100, 61000);
+        assert!(t.needs_battery_refresh(61000));
+        t.update("A", "earbuds", "left", 100, 61000);
+        assert!(t.needs_battery_refresh(61000));
+        t.update("A", "earbuds", "right", 100, 61000);
+        assert!(!t.needs_battery_refresh(61000));
+        t.update("A", "case", "case", 100, 661000);
+        assert!(!t.needs_battery_refresh(661000));
+    }
+
     #[test]
     fn source_withdrawal_and_freshness_are_per_component() {
         let mut t = Telemetry::default();

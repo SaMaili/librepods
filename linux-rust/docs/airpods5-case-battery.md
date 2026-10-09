@@ -41,10 +41,16 @@ to fresh readings. Adapter device-added events also establish subscriptions when
 BlueZ discovery creates an advertiser without a monitor DeviceFound. Device
 removal clears its watcher; monitor loss alone does not remove a subscription.
 Because BlueZ suppresses identical ManufacturerData, duplicate-report LE scans run
-for eight seconds when a previously seen case is silent for at least 60 seconds.
-A 30-second scheduler stops requesting refreshes after ten minutes without a case
-sample. One 20-second startup window runs when stored keys exist. Live recovery after a process restart was verified once while an empty, closed
-case was charging; ongoing advertiser discovery is covered by the adapter stream.
+for eight seconds when any previously seen component is silent for at least 60
+seconds. The newest source timestamp is checked separately for left, right and
+case, so a fresh case cannot suppress stale earbud refreshes. A 30-second
+scheduler stops probing a component after ten minutes without a sample. One
+20-second startup window runs when stored keys exist. Auto-connect runs separately
+with a 20-second timeout on the monitored adapter, deduplicated by paired address;
+an outstanding connection attempt neither blocks packet processing nor terminates
+an advertiser watcher. Live recovery after a process restart was verified once
+while an empty, closed case was charging; ongoing advertiser discovery is covered
+by the adapter stream.
 
 ## Consumer interface
 
@@ -90,3 +96,16 @@ After installation, a three-minute live test followed right 40% to 49% charging
 and case 49% to 48% not charging. No component disappeared after startup; right
 and case sample age stayed at or below 37.4 seconds. The user confirmed that
 the widget displayed the correct state.
+
+On 2026-10-09, both earbuds outside the case stayed cached while an independent
+35-second observer received 160 fresh earbud updates (left 100%, right 99%).
+The receiver awaited auto-connect while holding the connection guard, and a
+duplicate attempt returned from its advertiser watcher before battery processing.
+Auto-connect is now separate, bounded and deduplicated by paired address.
+A fresh case also no longer suppresses scans for stale earbud components.
+After installation and restart, a 184.0-second run without an independent
+observer recovered both components within 2.0 seconds and followed left
+100% to 99%, right 99% to 98%, both not charging. All samples from two seconds
+onward contained both components; maximum sample age was 67.3 seconds. No fresh
+case report was received in this state. This run does not separately validate
+connection timeout/error handling.
