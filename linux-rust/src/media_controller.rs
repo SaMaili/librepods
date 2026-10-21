@@ -371,30 +371,19 @@ impl MediaController {
             return;
         }
 
-        // Always resolve the card by MAC first: a reconnect can change its index.
-        if self.refresh_device_index().await.is_none() {
-            warn!("Could not get device index. Cannot activate A2DP profile.");
-            return;
-        }
-
-        if !self.is_a2dp_profile_available().await {
-            // A freshly connected card can show up before its profiles are
-            // enumerated. Give that a grace period before restarting
-            // WirePlumber, which interrupts playback for several seconds.
-            warn!("A2DP profile not available yet, waiting for enumeration");
-            if !self
-                .wait_for_a2dp_profile(Self::A2DP_ENUMERATION_ATTEMPTS)
-                .await
+        // The Bluetooth connection can precede both the card and its profiles.
+        if !self
+            .wait_for_a2dp_profile(Self::A2DP_ENUMERATION_ATTEMPTS)
+            .await
+        {
+            warn!("A2DP card or profile still missing, restarting WirePlumber as a last resort");
+            if !self.restart_wire_plumber().await
+                || !self
+                    .wait_for_a2dp_profile(Self::A2DP_ENUMERATION_ATTEMPTS)
+                    .await
             {
-                warn!("A2DP profile still missing, restarting WirePlumber as a last resort");
-                if !self.restart_wire_plumber().await
-                    || !self
-                        .wait_for_a2dp_profile(Self::A2DP_ENUMERATION_ATTEMPTS)
-                        .await
-                {
-                    error!("A2DP profile unavailable, skipping profile activation");
-                    return;
-                }
+                error!("A2DP profile unavailable, skipping profile activation");
+                return;
             }
         }
 
