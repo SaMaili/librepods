@@ -47,7 +47,7 @@ struct Args {
     version: bool
 }
 
-fn main() -> iced::Result {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
     if args.version {
@@ -78,23 +78,23 @@ fn main() -> iced::Result {
     let device_managers: Arc<RwLock<HashMap<String, DeviceManagers>>> =
         Arc::new(RwLock::new(HashMap::new()));
 
-    // Load stem_control initial value from settings JSON, then apply CLI override.
     if args.no_tray {
         // Run headless without UI
         info!("Running in headless mode (no GUI)");
         let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async_main(ui_tx, device_managers)).unwrap();
+        rt.block_on(async_main(ui_tx, device_managers))?;
         Ok(())
     } else {
         // Run with UI
         let device_managers_clone = device_managers.clone();
         std::thread::spawn(|| {
             let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(async_main(ui_tx, device_managers_clone))
-                .unwrap();
+            if let Err(e) = rt.block_on(async_main(ui_tx, device_managers_clone)) {
+                log::error!("Bluetooth initialization failed: {}", e);
+            }
         });
 
-        ui::window::start_ui(ui_rx, args.start_minimized, device_managers)
+        Ok(ui::window::start_ui(ui_rx, args.start_minimized, device_managers)?)
     }
 }
 
@@ -149,7 +149,7 @@ async fn async_main(
 
     let session = bluer::Session::new().await?;
     let adapter = session.default_adapter().await?;
-    adapter.set_powered(true).await?;
+    crate::bluetooth::wait_for_adapter_power(&adapter).await?;
 
     let le_tray_clone = tray_handle.clone();
     tokio::spawn(async move {

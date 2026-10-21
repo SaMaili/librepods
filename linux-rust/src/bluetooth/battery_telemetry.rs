@@ -76,12 +76,13 @@ impl Telemetry {
             .collect()
     }
     pub fn needs_battery_refresh(&self, now: u64) -> bool {
-        // Refresh each previously seen component independently. A fresh case
-        // must not hide stale earbud samples; stop probing after ten minutes.
+        // Refresh the case before consumers' 30-second visibility timeout.
+        // Earbuds keep their longer interval; stop probing after ten minutes.
         self.data.values().any(|parts| {
-            parts.values().any(|sources| {
+            parts.iter().any(|(component, sources)| {
+                let stale_ms = if component == "case" { 15_000 } else { 60_000 };
                 let last = sources.values().map(|sample| sample.observed_at).max();
-                last.is_some_and(|at| now >= at && (60_000..600_000).contains(&(now - at)))
+                last.is_some_and(|at| now >= at && (stale_ms..600_000).contains(&(now - at)))
             })
         })
     }
@@ -147,6 +148,16 @@ mod tests {
         assert!(t.needs_battery_refresh(61000));
         assert!(!t.needs_battery_refresh(601000));
         assert!(!t.needs_battery_refresh(999));
+    }
+    #[test]
+    fn case_refresh_precedes_short_visibility_timeout() {
+        let mut t = Telemetry::default();
+        t.update("A", "case", "case", 128 + 96, 1000);
+        assert!(!t.needs_battery_refresh(15999));
+        assert!(t.needs_battery_refresh(16000));
+        t.update("A", "case", "case", 128 + 96, 16000);
+        assert!(!t.needs_battery_refresh(16000));
+        assert!(!t.needs_battery_refresh(616000));
     }
     #[test]
     fn fresh_case_does_not_suppress_stale_earbud_refresh() {

@@ -1,4 +1,5 @@
 use crate::bluetooth::aacp::BatteryStatus;
+use crate::bluetooth::apple_advertisement;
 use crate::bluetooth::case_battery;
 use crate::devices::enums::{DeviceData, DeviceInformation, DeviceType};
 use crate::ui::tray::MyTray;
@@ -50,7 +51,7 @@ fn verify_rpa(addr: &str, irk: &[u8; 16]) -> bool {
 pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> bluer::Result<()> {
     let session = Session::new().await?;
     let adapter = session.default_adapter().await?;
-    adapter.set_powered(true).await?;
+    crate::bluetooth::wait_for_adapter_power(&adapter).await?;
 
     let mut all_devices: HashMap<String, DeviceData> = std::fs::read_to_string(get_devices_path())
         .ok()
@@ -134,7 +135,7 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                 log::warn!("Battery refresh filter unavailable: {}", e);
                 return;
             }
-            let mut timer = tokio::time::interval(std::time::Duration::from_secs(30));
+            let mut timer = tokio::time::interval(std::time::Duration::from_secs(5));
             timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
             let mut bootstrap = bootstrap_scan;
             loop {
@@ -294,14 +295,25 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                 let task = tokio::spawn(async move {
                     let mut last_battery = None;
                     let mut last_case = None;
+                    let mut case_decoder = case_battery::AdvertiserDecoder::default();
+                    let mut reported_formats = HashSet::new();
                     while let Some(ev) = events.next().await {
                         match ev {
                             bluer::DeviceEvent::PropertyChanged(prop) => {
                                 if let bluer::DeviceProperty::ManufacturerData(data) = prop {
-                                    if let Some(apple_data) = data.get(&76)
-                                        && let Some((pair, components)) =
-                                            case_battery::match_components(apple_data, &case_keys)
+                                    if let Some(bytes) = data.get(&76)
+                                        && (matched_airpods_mac.is_some() || case_decoder.is_bound())
                                     {
+                                        for record in apple_advertisement::records(bytes) {
+                                            let subtype = record.payload.first().copied().unwrap_or(255);
+                                            if reported_formats.insert((record.kind, subtype, record.payload.len())) {
+                                                info!("AirPods advertisement format: type={:#04x}, subtype={:#04x}, payload_length={}", record.kind, subtype, record.payload.len());
+                                            }
+                                        }
+                                    }
+                                    let case_report = data.get(&76)
+                                        .and_then(|bytes| case_decoder.decode(bytes, &case_keys));
+                                    if let Some((pair, components)) = case_report {
                                         let value = components[2];
                                         if last_case != Some(value) {
                                             info!("Independent case battery byte: {value:#04x}");
@@ -318,7 +330,7 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                                                         .zip(components)
                                                     {
                                                         tray.telemetry
-                                                            .update(pair, "case", name, byte, now);
+                                                            .update(&pair, "case", name, byte, now);
                                                     }
                                                     let _ = tray.telemetry.publish(now);
                                                 })
@@ -326,10 +338,27 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                                         }
                                         continue;
                                     }
+                                    if let Some(pair) = &matched_airpods_mac
+                                        && let Some(parts) = data.get(&76)
+                                            .and_then(|bytes| apple_advertisement::airpods5_pairing_batteries(bytes))
+                                    {
+                                        if let Some(handle) = &tray_handle_clone {
+                                            handle.update(|tray: &mut MyTray| {
+                                                let now = crate::bluetooth::battery_telemetry::now_ms();
+                                                for (name, byte) in ["left", "right", "case"].into_iter().zip(parts) {
+                                                    if let Some(byte) = byte {
+                                                        tray.telemetry.update(pair, "pairing", name, byte, now);
+                                                    }
+                                                }
+                                                let _ = tray.telemetry.publish(now);
+                                            }).await;
+                                        }
+                                        continue;
+                                    }
+                                    let legacy_data = data.get(&76)
+                                        .and_then(|bytes| apple_advertisement::legacy_packet(bytes));
                                     if let Some(enc_key) = &matched_enc_key
-                                        && let Some(apple_data) = data.get(&76)
-                                        && apple_data.len() == 27
-                                        && apple_data[..3] == [0x07, 0x19, 0x01]
+                                        && let Some(apple_data) = legacy_data.as_ref()
                                     {
                                         let last_16: [u8; 16] =
                                             apple_data[apple_data.len() - 16..].try_into().unwrap();
