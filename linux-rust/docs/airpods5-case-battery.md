@@ -14,33 +14,23 @@ decoder requires exactly one structurally valid match among stored AirPods keys.
 | Plaintext bytes | Interpretation |
 | --- | --- |
 | 0–1 | Little-endian product `0x2035` |
-| 2 | Lid-open counter in bits 0–2, accessory status flags in bits 3–5 |
+| 2 | Opaque status; not a format-version gate |
 | 3 | Case battery |
 | 4 | Left earbud battery |
 | 5 | Right earbud battery |
-| 6–8 | Packed firmware fields |
-| 9 | Multiplied by 600 into `accessoryStatusOBCTime`; OBC meaning not established |
-| 10–15 | Not consumed by the recovered Apple handler |
+| 6–7, 12–13 | Unknown |
+| 8–11, 15 | Zero in observed frames |
+| 14 | Opaque field, observed as `0` and `1` |
 
 Battery bytes use bits 0–6 for percentage, bit 7 for charging, and `ff` for unknown.
-The Apple handler clamps known percentages to 100. Initial attribution still
-requires exactly one key match, product 2035, plausible battery bytes and zero
-bytes 10–11 and 15 from the captures. These zeros are conservative matching
-heuristics rather than Apple format requirements. Once an advertiser has been
-identified, firmware/time and uninterpreted tail bytes may vary without dropping
-its reports. Byte 14 is not a format gate. Address rotation needs fresh initial
-attribution. None of these checks authenticates a device or authorizes control
-operations. Tests use synthetic keys and packets, not accessory secrets.
-
-The record reader now supports concatenated manufacturer entries and the
-`length_byte & 0x1f` rule recovered from macOS 27.0.1 build 26A434. The known
-wire example above remains valid. The source-image audit, additional AirPods-5
-battery paths and exact limits are documented in
-[macos-26A434-advertisements.md](macos-26A434-advertisements.md).
+Known percentages must be 0–100. Model, length, header, zero fields and the
+observed byte-14 values are validated. Byte 14 is not assumed to be reserved or
+a charging indicator; its meaning remains unknown. These checks are not cryptographic authentication and must not authorize
+control operations. Tests use synthetic keys and packets, not accessory secrets.
 
 ## Source selection and reception
 
-AACP and the supported advertisement formats share one store per paired address/component.
+AACP and both advertisement formats share one store per paired address/component.
 An unknown slot withdraws only its source; the newest sample younger than 150
 seconds wins. The tray uses this store and reports charging in plain text; its
 charging icon is drawn geometry. Information refreshes preserve proximity keys,
@@ -51,10 +41,10 @@ to fresh readings. Adapter device-added events also establish subscriptions when
 BlueZ discovery creates an advertiser without a monitor DeviceFound. Device
 removal clears its watcher; monitor loss alone does not remove a subscription.
 Because BlueZ suppresses identical ManufacturerData, duplicate-report LE scans run
-for eight seconds when a previously seen Case is silent for at least 15 seconds,
-or an earbud for at least 60 seconds. The newest source timestamp is checked
-separately for left, right and case, so a fresh case cannot suppress stale earbud
-refreshes. A five-second scheduler stops probing a component after ten minutes without a sample. One
+for eight seconds when any previously seen component is silent for at least 60
+seconds. The newest source timestamp is checked separately for left, right and
+case, so a fresh case cannot suppress stale earbud refreshes. A 30-second
+scheduler stops probing a component after ten minutes without a sample. One
 20-second startup window runs when stored keys exist. Auto-connect runs separately
 with a 20-second timeout on the monitored adapter, deduplicated by paired address;
 an outstanding connection attempt neither blocks packet processing nor terminates
@@ -99,10 +89,9 @@ not validated. Raw captures, real keys, addresses and serials are excluded.
 On 2026-10-09, a right earbud charging in the case produced byte 14 = 1,
 while bytes 8–11 and 15 stayed zero. The old zero-only check discarded these
 packets. Independent decryption showed case 52% to 51% and right 30% to 35%
-with charging set, consistent with the user's iPhone observations. At that stage the decoder
-accepted only observed byte-14 values 0 and 1. The later macOS 26A434 audit
-established that byte 14 is not a format gate, superseding that restriction.
-Initial identity checks and synthetic-key regression fixtures remain in place.
+with charging set, consistent with the user's iPhone observations. The decoder
+now accepts only observed byte-14 values 0 and 1; other format, percentage and
+unique-key checks remain unchanged. Regression fixtures use a synthetic key.
 After installation, a three-minute live test followed right 40% to 49% charging
 and case 49% to 48% not charging. No component disappeared after startup; right
 and case sample age stayed at or below 37.4 seconds. The user confirmed that
