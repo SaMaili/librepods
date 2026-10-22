@@ -18,6 +18,16 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+struct BackgroundTasks(Vec<tokio::task::JoinHandle<()>>);
+
+impl Drop for BackgroundTasks {
+    fn drop(&mut self) {
+        for task in &self.0 {
+            task.abort();
+        }
+    }
+}
+
 fn decrypt(key: &[u8; 16], data: &[u8; 16]) -> [u8; 16] {
     let cipher = Aes128::new(&Array::from(*key));
     let mut block = Array::from(*data);
@@ -60,6 +70,7 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
 
     let mut verified_macs: HashMap<Address, String> = HashMap::new();
     let mut watchers: HashMap<Address, tokio::task::JoinHandle<()>> = HashMap::new();
+    let mut background_tasks = BackgroundTasks(Vec::new());
     let connecting_macs = Arc::new(Mutex::new(HashSet::<Address>::new()));
 
     let pattern = Pattern {
@@ -86,7 +97,7 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
 
     // Trigger a tray change on expiry so consumers can use their last-known cache.
     if let Some(handle) = tray_handle.clone() {
-        tokio::spawn(async move {
+        background_tasks.0.push(tokio::spawn(async move {
             let mut timer = tokio::time::interval(std::time::Duration::from_secs(5));
             loop {
                 timer.tick().await;
@@ -101,7 +112,7 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                     })
                     .await;
             }
-        });
+        }));
     }
     // BlueZ can retain advertisers across a LibrePods restart without sending
     // DeviceFound again. Subscribe to future changes on these objects as well,
@@ -125,7 +136,7 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
     // windows refresh stale components even if another component remains fresh.
     if let Some(handle) = tray_handle.clone() {
         let refresh_adapter = adapter.clone();
-        tokio::spawn(async move {
+        background_tasks.0.push(tokio::spawn(async move {
             let filter = bluer::DiscoveryFilter {
                 transport: bluer::DiscoveryTransport::Le,
                 duplicate_data: true,
@@ -171,7 +182,7 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                     Err(e) => log::warn!("Battery refresh scan unavailable: {}", e),
                 }
             }
-        });
+        }));
     }
     loop {
         let (device_address, newly_found) = if let Some(addr) = existing_advertisers.pop() {
@@ -210,7 +221,13 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
                 }
             }
             let adapter_monitor_clone = adapter.clone();
-            let dev = adapter_monitor_clone.device(device_address)?;
+            let dev = match adapter_monitor_clone.device(device_address) {
+                Ok(dev) => dev,
+                Err(e) => {
+                    debug!("Skipping disappeared LE advertiser: {}", e);
+                    continue;
+                }
+            };
             let addr = dev.address();
             let addr_str = addr.to_string();
             if watchers.get(&addr).is_some_and(|task| !task.is_finished()) {
@@ -277,10 +294,22 @@ pub async fn start_le_monitor(tray_handle: Option<ksni::Handle<MyTray>>) -> blue
             }
 
             if matched_airpods_mac.is_some() || !case_keys.is_empty() {
-                let live_events = dev.events().await?;
+                let live_events = match dev.events().await {
+                    Ok(events) => events,
+                    Err(e) => {
+                        debug!("Skipping disappeared LE advertiser: {}", e);
+                        continue;
+                    }
+                };
                 // Only new sightings may use the initial ManufacturerData as a fresh sample.
                 let initial_data = if newly_found {
-                    dev.manufacturer_data().await?
+                    match dev.manufacturer_data().await {
+                        Ok(data) => data,
+                        Err(e) => {
+                            debug!("Initial LE advertisement unavailable: {}", e);
+                            None
+                        }
+                    }
                 } else {
                     None
                 };

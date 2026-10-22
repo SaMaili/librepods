@@ -153,9 +153,13 @@ async fn async_main(
 
     let le_tray_clone = tray_handle.clone();
     tokio::spawn(async move {
-        info!("Starting LE monitor...");
-        if let Err(e) = start_le_monitor(le_tray_clone).await {
-            log::error!("LE monitor error: {}", e);
+        loop {
+            info!("Starting LE monitor...");
+            match start_le_monitor(le_tray_clone.clone()).await {
+                Ok(()) => log::warn!("LE monitor ended; restarting"),
+                Err(e) => log::error!("LE monitor error: {}; restarting", e),
+            }
+            tokio::time::sleep(std::time::Duration::from_secs(3)).await;
         }
     });
 
